@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CGIAR Climate Research Synthesis</title>
+    
+    <!-- Google Fonts: Inter for clean, modern typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Phosphor Icons for modern iconography -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <!-- Google Charts -->
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    
+    <!-- Local Styles -->
+    <link rel="stylesheet" href="src/css/styles.css">
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="brand">
+                <img src="src/icons/cgiarailibrarian.png" alt="CGIAR AI Librarian" class="brand-icon" style="width: 140px; height: auto;">
+                <div>
+                    <h1> </h1>
+                    <span class="subtitle">Climate Data Hub</span>
+                </div>
+            </div>
+
+            <nav class="nav-menu">
+                <button class="nav-item active" data-target="dashboard">
+                    <i class="ph ph-squares-four"></i>
+                    <span>Dashboard</span>
+                </button>
+                <button class="nav-item" data-target="countries">
+                    <i class="ph ph-map-pin"></i>
+                    <span>Countries</span>
+                </button>
+                <button class="nav-item" data-target="systems">
+                    <i class="ph ph-plant"></i>
+                    <span>Production Systems</span>
+                </button>
+                <button class="nav-item" data-target="gaps">
+                    <i class="ph ph-magnifying-glass-chart"></i>
+                    <span>Evidence Gaps</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="meta-info">
+                    <p class="label">Last Updated</p>
+                    <p class="value" id="last-updated">Loading...</p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="top-header">
+                <h2 id="page-title">Global Overview</h2>
+                <div class="header-actions">
+                    <div class="search-bar">
+                        <i class="ph ph-magnifying-glass"></i>
+                        <input type="text" id="global-search" placeholder="Search profiles or DOI...">
+                    </div>
+                </div>
+            </header>
+
+            <!-- Views Container -->
+            <div class="views-container">
+                
+                <!-- View 1: Dashboard (Global Stats) -->
+                <section id="view-dashboard" class="view active">
+                    <div class="metrics-grid">
+                        <div class="metric-card gradient-card">
+                            <div class="metric-icon"><i class="ph ph-files"></i></div>
+                            <div class="metric-data">
+                                <h3>Total Records</h3>
+                                <div class="value" id="stat-total">0</div>
+                            </div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-icon"><i class="ph ph-thermometer-sun"></i></div>
+                            <div class="metric-data">
+                                <h3>Adaptation</h3>
+                                <div class="value" id="stat-adaptation">0</div>
+                            </div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-icon"><i class="ph ph-cloud-arrow-down"></i></div>
+                            <div class="metric-data">
+                                <h3>Mitigation</h3>
+                                <div class="value" id="stat-mitigation">0</div>
+                            </div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-icon"><i class="ph ph-drop"></i></div>
+                            <div class="metric-data">
+                                <h3>Water</h3>
+                                <div class="value" id="stat-water">0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Map Section -->
+                    <div class="glass-panel" style="margin-bottom: 32px;">
+                        <div class="section-header">
+                            <h3>Global Research Distribution</h3>
+                            <button class="btn-ghost" onclick="app.switchView('countries')">View List <i class="ph ph-arrow-right"></i></button>
+                        </div>
+                        <div id="regions_div" style="width: 100%; height: 450px; border-radius: 12px; overflow: hidden; background: #f8fafc; display: flex; align-items: center; justify-content: center;">
+                            <span style="color: var(--text-muted);"><i class="ph ph-spinner ph-spin"></i> Loading map...</span>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-content">
+                        <div class="chart-section glass-panel">
+                            <div class="section-header">
+                                <h3>Top Research Geographies</h3>
+                                <button class="btn-ghost" onclick="app.switchView('countries')">View All</button>
+                            </div>
+                            <div class="top-list" id="dashboard-top-countries">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+                        <div class="chart-section glass-panel">
+                            <div class="section-header">
+                                <h3>Primary Production Systems</h3>
+                                <button class="btn-ghost" onclick="app.switchView('systems')">View All</button>
+                            </div>
+                            <div class="top-list" id="dashboard-top-systems">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- View 2: Countries -->
+                <section id="view-countries" class="view">
+                    <div class="split-layout">
+                        <!-- List Panel (Optimized) -->
+                        <div class="list-panel glass-panel">
+                            <div class="list-header">
+                                <h3>Country Profiles</h3>
+                                <span class="badge" id="country-count">0</span>
+                            </div>
+                            <!-- Search embedded directly in list panel -->
+                            <div class="panel-search">
+                                <i class="ph ph-magnifying-glass"></i>
+                                <input type="text" id="country-search" placeholder="Filter countries...">
+                            </div>
+                            <div class="list-body scrollable" id="country-list">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+                        <!-- Detail Panel -->
+                        <div class="detail-panel glass-panel" id="country-detail">
+                            <div class="empty-state">
+                                <i class="ph ph-cursor-click"></i>
+                                <p>Select a country to view synthesized findings.</p>
+                            </div>
+                            <!-- Detailed content injected here -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- View 3: Production Systems -->
+                <section id="view-systems" class="view">
+                    <div class="split-layout">
+                        <!-- List Panel (Optimized) -->
+                        <div class="list-panel glass-panel">
+                            <div class="list-header">
+                                <h3>Agricultural Systems</h3>
+                                <span class="badge" id="system-count">0</span>
+                            </div>
+                            <div class="panel-search">
+                                <i class="ph ph-magnifying-glass"></i>
+                                <input type="text" id="system-search" placeholder="Filter systems...">
+                            </div>
+                            <div class="list-body scrollable" id="system-list">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+                        <!-- Detail Panel -->
+                        <div class="detail-panel glass-panel" id="system-detail">
+                            <div class="empty-state">
+                                <i class="ph ph-cursor-click"></i>
+                                <p>Select a production system to view synthesized findings.</p>
+                            </div>
+                            <!-- Detailed content injected here -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- View 4: Evidence Gaps -->
+                <section id="view-gaps" class="view">
+                    <div class="gaps-container glass-panel">
+                        <div class="section-header">
+                            <h3>Identified Evidence Gaps</h3>
+                            <p class="subtitle">Areas with limited research output currently in the hub.</p>
+                        </div>
+                        <div class="gaps-grid" id="gaps-list">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Application Logic -->
+    <script src="src/js/app.js"></script>
+    
+    <!-- Marked.js for Markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</body>
+</html>
