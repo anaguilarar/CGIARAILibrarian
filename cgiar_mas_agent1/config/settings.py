@@ -11,8 +11,8 @@ CGSPACE_API_URL_METRICS = 'https://cgspace.cgiar.org/server/api/statistics/usage
 
 GARDIAN_API_URL = os.getenv("GARDIAN_API_URL", "https://api.qvantum.scio.services/api/node/agris/gardian_index")
 GARDIAN_API_KEY = os.getenv("GARDIAN_API_KEY", "")
-#DATAVERSE_API_URL = os.getenv("DATAVERSE_API_URL", "https://dataverse.harvard.edu/api/search")
-DATAVERSE_API_URL = os.getenv("DATAVERSE_API_URL", "")
+DATAVERSE_API_URL = os.getenv("DATAVERSE_API_URL", "https://dataverse.harvard.edu/api/search")
+#DATAVERSE_API_URL = os.getenv("DATAVERSE_API_URL", "")
 DATAVERSE_API_URL_METRICS = os.getenv("DATAVERSE_API_URL_METRICS", "https://dataverse.harvard.edu")
 # LLM Configuration
 # Options: "ollama", "llama-cpp-python", "mock"

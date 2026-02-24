@@ -2,6 +2,7 @@ import math
 from datetime import datetime
 from ...config.settings import WEIGHT_CITATIONS, WEIGHT_RECENCY, WEIGHT_IMPACT, WEIGHT_USAGE, WEIGHT_LLMCLASS
 
+
 class Ranker:
     """
     Calculates impact score based on metadata signals: Citations, Recency, Metadata Quality (DOI), and Usage (Views/Downloads).

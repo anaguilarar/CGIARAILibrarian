@@ -14,7 +14,7 @@ from cgiar_mas_agent1.agent1.retrieval.gardian import GardianConnector
 from cgiar_mas_agent1.agent1.processing.filters import CGIARFilter
 from cgiar_mas_agent1.agent1.intelligence.llm import LLMClassifier
 from cgiar_mas_agent1.agent1.analysis.ranking import Ranker
-from cgiar_mas_agent1.config.settings import GARDIAN_API_KEY
+from cgiar_mas_agent1.config.settings import GARDIAN_API_KEY, DATAVERSE_API_URL
 
 # Setup Logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -29,15 +29,32 @@ class Agent1Pipeline:
         
         # Register Connectors
         self.connectors.append(CGSpaceConnector())
-        self.connectors.append(DataverseConnector())
         
+        if DATAVERSE_API_URL:
+            self.connectors.append(DataverseConnector())
+        else:
+            logger.warning("Skipping DATAVERSE Connector: No API Key provided.")
         # Only add Gardian if Key is present
         if GARDIAN_API_KEY:
             self.connectors.append(GardianConnector())
         else:
             logger.warning("Skipping GARDIAN Connector: No API Key provided.")
+        
+        self.state_file = "cgiar_mas_agent1/output/agent1_state.json"
+        self.checkpoint_file = "cgiar_mas_agent1/output/agent1_checkpoint.jsonl"
+    
+    def _save_state(self,query, offsets):
+        
+        with open(self.state_file, "w") as f:
+            json.dump({
+                "last_query": query,
+                "offsets": offsets
+            }, f)
 
     def run(self, query: str = "climate change", total_target: int = 50, batch_size: int = 10):
+
+        
+
         logger.info(f"Starting Agent 1 Pipeline with query: '{query}' | Target: {total_target} records.")
         
         all_raw_records = []
@@ -49,19 +66,16 @@ class Agent1Pipeline:
         
         final_results = []
         
-        # Checkpoint Setup
-        CHECKPOINT_FILE = "cgiar_mas_agent1/output/agent1_checkpoint.jsonl"
-        STATE_FILE = "cgiar_mas_agent1/output/agent1_state.json"
-        
+                
         processed_ids = set()
         offsets = {"CGSpace": 0, "Dataverse": 0}
         
         # Check State for Query Persistence
         import os
         last_query = ""
-        if os.path.exists(STATE_FILE):
+        if os.path.exists(self.state_file):
             try:
-                with open(STATE_FILE, "r") as f:
+                with open(self.state_file, "r") as f:
                     state = json.load(f)
                     last_query = state.get("last_query", "")
                     saved_offsets = state.get("offsets", {})
@@ -79,7 +93,7 @@ class Agent1Pipeline:
             
         # Load existing checkpoint if available
         try:
-            with open(CHECKPOINT_FILE, "r", encoding="utf-8") as f:
+            with open(self.checkpoint_file, "r", encoding="utf-8") as f:
                 for line in f:
                     try:
                         record_data = json.loads(line)
@@ -98,7 +112,8 @@ class Agent1Pipeline:
         except FileNotFoundError:
             logger.info("No checkpoint found. Starting fresh.")
 
-
+        offsets_positions = {connector.source_name:[] for connector in self.connectors}
+        
         for connector in self.connectors:
             try:
                 # Calculate share per connector
@@ -108,13 +123,15 @@ class Agent1Pipeline:
                 # Fetching
                 current_offset = offsets.get(connector.source_name, 0)
                 logger.info(f"Querying {connector.source_name} starting at offset {current_offset} for {limit_per_source} records...")
-                results = list(connector.search(query, limit=limit_per_source, start_offset=current_offset))
+                results = list(connector.search(query, limit=limit_per_source, start_offset=current_offset, uuid_list = processed_ids))
                 logger.info(f"Retrieved {len(results)} records from {connector.source_name}")
                 if hasattr(connector, 'last_position'):
-                    offsets[connector.source_name] = connector.last_position
+                    #offsets[connector.source_name] = connector.last_position
+                    offsets_positions[connector.source_name] = connector.last_position
                 else:
                     # Fallback for CGSpace if it doesn't have this logic yet
-                    offsets[connector.source_name] += len(results) 
+                    offsets_positions[connector.source_name].append(len(results))
+                    #offsets[connector.source_name] += len(results) 
                     
                 all_raw_records.extend(results)
             except Exception as e:
@@ -123,13 +140,7 @@ class Agent1Pipeline:
         if not all_raw_records:
             logger.warning("No records found from any source.")
             return
-
         # Save current state
-        with open(STATE_FILE, "w") as f:
-            json.dump({
-                "last_query": query,
-                "offsets": offsets
-            }, f)
             
         # 2. Filtering
         #logger.info("Phase 2: Filtering...")
@@ -150,7 +161,7 @@ class Agent1Pipeline:
                 yield lst[i:i + n]
 
         total_processed_new = 0
-        
+        position_datasets_count = {connector.source_name:0 for connector in self.connectors}
         for batch_idx, batch in enumerate(get_batches(all_raw_records, batch_size)):
             logger.info(f"Processing Batch {batch_idx + 1} ({len(batch)} records)...")
             
@@ -158,6 +169,9 @@ class Agent1Pipeline:
                 # Checkpoint Check
                 pid = record.doi_pid or record.title
                 if pid in processed_ids:
+                    offsets[record.repository_source]= offsets_positions[record.repository_source][position_datasets_count[record.repository_source]] if position_datasets_count[record.repository_source] < len(
+                        offsets_positions[record.repository_source]) else offsets_positions[record.repository_source][-1]
+                    position_datasets_count[record.repository_source] +=1
                     # logger.info(f"Skipping processed record: {pid}")
                     continue
 
@@ -167,9 +181,11 @@ class Agent1Pipeline:
                 except Exception:
                     # Fallback
                     cls_result = {
-                        "ontology_tags": ["Unclassified"], 
-                        "classification_confidence": 0.0, 
-                        "classification_explanation": "Error"
+                        "ontology_tags": [],
+                        "production_system": "Unclassified",
+                        "classification_confidence": 0.0,
+                        "classification_explanation": "Classification failed.",
+                        "models_name": self.classifier.model
                     }
                 
                 # Rank
@@ -181,7 +197,6 @@ class Agent1Pipeline:
                     downloads=record.downloads_count,
                     llm_confidence=cls_result['classification_confidence']
                 )
-
                 # Merge
                 final_record = ClassifiedMetadata(
                     **record.model_dump(),
@@ -189,9 +204,8 @@ class Agent1Pipeline:
                     ranking_score=score
                 )
                 final_results.append(final_record)
-                
                 # Incremental Save (Append to JSONL)
-                with open(CHECKPOINT_FILE, "a", encoding="utf-8") as f:
+                with open(self.checkpoint_file, "a", encoding="utf-8") as f:
                     f.write(final_record.model_dump_json() + "\n")
                 
                 # Add to memory set to prevent dupes in same run
@@ -199,7 +213,13 @@ class Agent1Pipeline:
                 total_processed_new += 1
             
             # Optional: Intermediate save or sleep here if API limits concern
+                offsets[record.repository_source]= offsets_positions[record.repository_source][position_datasets_count[record.repository_source]] if position_datasets_count[record.repository_source] < len(
+                    offsets_positions[record.repository_source]) else offsets_positions[record.repository_source][-1]
+                position_datasets_count[record.repository_source] +=1
+                
         
+        self._save_state(query, offsets)
+            
         # 4. Output
         # Convert all results (loaded + new) to DataFrame
         if final_results:
@@ -214,5 +234,5 @@ class Agent1Pipeline:
 
 if __name__ == "__main__":
     agent = Agent1Pipeline()
-    agent.run(total_target=100)
+    agent.run(total_target=20)
     

@@ -6,8 +6,10 @@ from .base import BaseConnector
 from ..core.domain import RawMetadata
 from ...config.settings import DATAVERSE_API_URL, DATAVERSE_API_URL_METRICS
 from ..processing.filters import CGIARFilter
+from ..analysis.utils import get_crossref_citation_count
+import copy
 
-def cgspace_metrics(uuid, metric):
+def dataverse_metrics(uuid, metric):
     """_summary_
 
     Args:
@@ -30,18 +32,18 @@ class DataverseConnector(BaseConnector):
         super().__init__("Dataverse")
         self.api_url = DATAVERSE_API_URL
         self.cgiarfilterer = CGIARFilter()
-        self.last_position:int = 0
+        self.last_position = []
 
-    def search(self, query: str, limit: int = 100, uuid_list:List[str] = None, start_offset: int = 0) -> Generator[RawMetadata, None, None]:
+    def search(self, query: str, limit: int = 100, uuid_list = None, start_offset: int = 0) -> Generator[RawMetadata, None, None]:
         """
         Searches Dataverse for items matching the query.
         """
         # Dataverse Search API: /api/search?q={query}&start={start}&type=dataset
         
-        if uuid_list is None:
-            uuid_list = []
+        if uuid_list is None: uuid_listc = set()
+        else: uuid_listc = copy.deepcopy(uuid_list)
         start = start_offset
-        self.last_position = start
+        self.last_position = [start]
         per_page = 10 # Dataverse default is often 10, max is usually 1000 but safest to paginate small
         items_yielded = 0
         consecutive_errors = 0
@@ -88,12 +90,13 @@ class DataverseConnector(BaseConnector):
                         rawdata = self._map_to_domain(item)
                         
                         if self.cgiarfilterer.is_cgiar_affiliated(rawdata):
-                            if rawdata.doi_pid not in uuid_list:
+                            if rawdata.doi_pid not in uuid_listc:
                                 
                                 self._enrich_metrics(rawdata, item.get('global_id'))
-                                uuid_list.append(rawdata.doi_pid)
+                                uuid_listc.add(rawdata.doi_pid)
                                 items_yielded += 1
                                 pbar.update(1)
+
                                 yield rawdata
                                 
 
@@ -103,13 +106,14 @@ class DataverseConnector(BaseConnector):
                         break
                         
                     start += len(results)
-                    self.last_position = start
+                    self.last_position.append(start)
+                    
                 except requests.exceptions.RequestException as e:
                     pbar.write(f"Error fetching data from Dataverse: {e}")
                     items_yielded += 1
                     #print(f"Error fetching data from Dataverse: {e}")
                     start += per_page
-                    self.last_position = start
+                    self.last_position.append(start)
                     consecutive_errors += 1
                     time.sleep(1)
                     
@@ -120,13 +124,19 @@ class DataverseConnector(BaseConnector):
         Helper method to fetch metrics only when necessary.
         """
         try:
-            # Assuming cgspace_metrics is available in global scope or imported
-            d_count = cgspace_metrics(global_id, "downloadsTotal")
+            
+            d_count = dataverse_metrics(global_id, "downloadsTotal")
             rawdata.downloads_count = d_count if d_count is not None else 0
             
-            v_count = cgspace_metrics(global_id, "viewsTotal")
+            v_count = dataverse_metrics(global_id, "viewsTotal")
             rawdata.total_views = v_count if v_count is not None else 0
+            
+            #if "doi" in global_id:
+            #    countv = get_crossref_citation_count(global_id)
+            #    rawdata.citation_count = countv if countv is not None else 0
+            
         except Exception as e:
+            print(e)
             # Fail silently on metrics so we don't lose the paper
             pass
         
@@ -165,6 +175,7 @@ class DataverseConnector(BaseConnector):
             affiliation=affiliation,
             keywords=keywords,
             year=year,
+            citation_count=0,
             downloads_count=0, # Placeholder
             total_views=0,     # Placeholder
             doi_pid=item.get("global_id", ""),

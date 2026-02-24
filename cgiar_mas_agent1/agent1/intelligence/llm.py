@@ -60,12 +60,11 @@ class LLMClassifier:
                 - keywords: {keywords}
                 - Abstract: {abstract}
 
-
                 Instructions:
                 - If the text discusses multiple topics (e.g., solar irrigation is Water + Mitigation), include ALL relevant tags.
                 - If it fits none, return an empty list [].
                 - Provide a confidence score (0.0 to 1.0) based on how clearly the abstract matches the definitions.
-                - Explanation: Citation of specific keywords found in the text. MAX 15 WORDS.
+                - Explanation: Citation of specific keywords found in the text. MAX 15 WORDS. **MUST BE IN ENGLISH.**
                 - NEGATIVE CONSTRAINT: Do not mention categories that are NOT present.
                 - Confidence: 0.9 (Explicit match), 0.7 (Thematic match), <0.5 (Weak).
 
@@ -80,7 +79,7 @@ class LLMClassifier:
 
     def classify(self, title: str, abstract: str, keywords: str) -> Dict[str, Any]:
         """
-        Returns classification dictionary: {tags, confidence, explanation}.
+        Returns classification dictionary: {tags, confidence, classification_explanation}.
         """
         if keywords is None:
             keywords = ''
@@ -125,11 +124,18 @@ class LLMClassifier:
             if not prod_system or prod_system.lower() in ["none", "non", "unknown"]:
                 prod_system = "General"
 
+            explanation = data.get("explanation", "No explanation provided.")
+            if isinstance(explanation, list):
+                explanation = "; ".join([str(i) for i in explanation])
+
+            if isinstance(explanation, dict):
+                explanation = "; ".join([f'{k}: {v}' for k, v in explanation.items()])
+
             return {
                 "ontology_tags": clean_tags,
                 "production_system": prod_system.lower(),
                 "classification_confidence": float(data.get("classification_confidence", 0.0)),
-                "classification_explanation": data.get("explanation", "No explanation provided."),
+                "classification_explanation": explanation,
                 "models_name": self.model
             }
             

@@ -1,11 +1,12 @@
 import requests
 import re
+import copy
 from tqdm import tqdm
 from typing import Generator, List, Dict, Any, Optional
 from .base import BaseConnector
 from ..core.domain import RawMetadata
 from ...config.settings import CGSPACE_API_URL, CGSPACE_API_URL_METRICS
-
+from ..analysis.utils import get_crossref_citation_count
 
 def cgspace_metrics(uuid:str, metric: str) -> int:
     """_summary_
@@ -34,17 +35,19 @@ class CGSpaceConnector(BaseConnector):
         super().__init__("CGSpace")
         self.api_url = CGSPACE_API_URL
 
-    def search(self, query: str, limit: int = 100, start_offset: int = 0) -> Generator[RawMetadata, None, None]:
+    def search(self, query: str, limit: int = 100, uuid_list = None, start_offset: int = 0) -> Generator[RawMetadata, None, None]:
         """
-        Searches CGSpace (DSpace 7) for items matching the query.
+        Searches CGSpace for items matching the query.
         """
+        if uuid_list is None: uuid_listc = set()
+        else: uuid_listc = copy.deepcopy(uuid_list)
         endpoint = f"{self.api_url}/discover/search/objects"
         
         # DSpace 7 Pagination: pages are 0-indexed
         page_size = 20 # Fetch in chunks
         page = start_offset ## // page_size
         
-        self.last_position = page
+        self.last_position = [page]
         
         items_yielded = 0
         with tqdm(total=limit, desc="Fetching Data", unit="item") as pbar:
@@ -77,9 +80,14 @@ class CGSpaceConnector(BaseConnector):
                         item_data = obj.get("_embedded", {}).get("indexableObject", {})
                         metadata_dict = item_data.get("metadata", {})
 
-                        yield self._map_to_domain(item_data, metadata_dict)
-                        items_yielded += 1
-                        pbar.update(1)
+                        rawdata = self._map_to_domain(item_data, metadata_dict)
+                        if rawdata.doi_pid not in uuid_listc:
+                            self._enrich_metrics(rawdata, item_data['uuid'])
+                            uuid_listc.add(rawdata.doi_pid)
+                            items_yielded += 1
+                            pbar.update(1)
+                            
+                            yield rawdata
 
                     # Check if we have reached the total available pages
                     total_pages = search_result.get("page", {}).get("totalPages", 0)
@@ -87,12 +95,34 @@ class CGSpaceConnector(BaseConnector):
                         break
                     
                     page += 1
-                    self.last_position = page
+                    self.last_position.append(page)
+                    
                     
                 except requests.exceptions.RequestException as e:
-                    pbar.write(f"Error fetching data from Dataverse: {e}")
+                    pbar.write(f"Error fetching data from cgspace: {e}")
                     items_yielded += 1
-                
+                    page += 1
+                    self.last_position.append(page)
+
+    def _enrich_metrics(self, rawdata: RawMetadata, global_id: str):
+        """
+        Helper method to fetch metrics only when necessary.
+        """
+        try:
+            d_count = cgspace_metrics(global_id, "TotalDownloads" )
+            rawdata.downloads_count = d_count if d_count is not None else 0
+            
+            v_count = cgspace_metrics(global_id, "TotalVisits" )
+            rawdata.total_views = v_count if v_count is not None else 0
+
+            #if "doi" in rawdata.doi_pid:
+            #    countv = get_crossref_citation_count(rawdata.doi_pid)
+            #    rawdata.citation_count = countv if countv is not None else 0
+            
+        except Exception as e:
+            print(e)
+            # Fail silently on metrics so we don't lose the paper
+            pass            
 
     def _map_to_domain(self, item_data: dict, metadata: dict) -> RawMetadata:
         """
@@ -127,8 +157,6 @@ class CGSpaceConnector(BaseConnector):
         
         keywords = get_meta('dcterms.subject', limit = 10) or ""
         
-        downloads_count = cgspace_metrics(item_data['uuid'], "TotalDownloads" )
-        total_views = cgspace_metrics(item_data['uuid'], "TotalVisits" ) 
         # Handle Authors
         authors_raw = metadata.get("dc.contributor.author", [])
         authors = [a.get("value") for a in authors_raw if "value" in a]
@@ -146,8 +174,6 @@ class CGSpaceConnector(BaseConnector):
         # Check for DOI or Handle
         doi_pid = get_meta("cg.identifier.doi") or get_meta("dc.identifier.doi") or item_data.get("handle") or ""
 
-        
-        citation_count = 0
         return RawMetadata(
             title=get_meta("dc.title") or "Untitled",
             abstract=abstract,
@@ -157,9 +183,9 @@ class CGSpaceConnector(BaseConnector):
             region=region,
             keywords=keywords,
             doi_pid=doi_pid,
-            citation_count=citation_count,
-            total_views = total_views,
-            downloads_count = downloads_count,
+            citation_count=0,
+            total_views = 0,
+            downloads_count = 0,
             repository_source="CGSpace",
             raw_source_data=item_data 
         )
