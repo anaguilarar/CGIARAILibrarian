@@ -127,3 +127,16 @@ PRIORITY_TARGETS: list[str] = [
 LLM_BACKEND = os.getenv("LLM_BACKEND", "ollama")
 LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME", "ministral-3:14b")
 LLM_API_BASE = os.getenv("LLM_API_BASE", "http://localhost:11434")
+
+
+#--- countries
+import re
+
+COUNTRIES = []
+
+with open('cgiar_mas_agent2/config/countries.txt', 'r') as fn:
+    text = fn.readlines()
+    for te in text:
+        clean_text = re.sub(r"[\[\]]", "", te)
+        clean_text = re.sub(r'<[^>]+>', '', clean_text).replace(',', '').replace('"','').strip().lower()
+        if clean_text: COUNTRIES.append(clean_text)

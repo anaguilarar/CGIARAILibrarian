@@ -56,6 +56,10 @@ def build_heatmap(df: pd.DataFrame) -> dict[str, dict[str, int]]:
     working["country"] = working["country"].replace("", "unknown")
 
     working["country"] = working["country"].replace('the democratic republic of the', 'the democratic republic of the congo')
+    working["country"] = working["country"].replace('republic of', 'unknown')
+    working["country"] = working["country"].replace('russian', 'russia')
+    working["country"] = working["country"].replace('the republic of the sudan', 'sudan')
+    working["country"] = working["country"].replace('republic of', 'unknown')
     working["country"] = working["country"].apply(lambda x: 'unknown' if x == 'republic of' else x)
 
     working["production_system"] = (

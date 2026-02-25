@@ -68,7 +68,8 @@ class Agent1Pipeline:
         
                 
         processed_ids = set()
-        offsets = {"CGSpace": 0, "Dataverse": 0}
+        saved_offsets = {connector.source_name:0 for connector in self.connectors}
+        saved_queries = {connector.source_name:query for connector in self.connectors}
         
         # Check State for Query Persistence
         import os
@@ -77,19 +78,16 @@ class Agent1Pipeline:
             try:
                 with open(self.state_file, "r") as f:
                     state = json.load(f)
-                    last_query = state.get("last_query", "")
-                    saved_offsets = state.get("offsets", {})
+                    if "offsets" in state:
+                        saved_offsets.update(state["offsets"])
+                    if "last_query" in state and isinstance(state["last_query"], dict):
+                        saved_queries.update(state["last_query"])
+                        
             except Exception:
                 pass
         
-        resume_mode = (last_query == query)
-        if resume_mode:
-            offsets = saved_offsets if saved_offsets else {"CGSpace": 0, "Dataverse": 0}
-            logger.info(f"Resuming query '{query}' with SAVED offsets: {offsets}")
-            
-        else:
-            logger.warning(f"Query changed or no state. Starting fresh.")
-            offsets = {"CGSpace": 0, "Dataverse": 0}
+        offsets = saved_offsets if saved_offsets else {"CGSpace": 0, "Dataverse": 0}
+        logger.info(f"Resuming query '{query}' with SAVED offsets: {offsets}")
             
         # Load existing checkpoint if available
         try:
@@ -101,41 +99,48 @@ class Agent1Pipeline:
                         pid = record_data.get("doi_pid") or record_data.get("title")
                         if pid:
                             processed_ids.add(pid)
-                            # Rehydrate object to keep in final memory
                             final_results.append(ClassifiedMetadata(**record_data))
                             
                     except json.JSONDecodeError:
                         continue
             logger.info(f"Loaded {len(processed_ids)} records from checkpoint.")
-            if resume_mode:
-                logger.info(f"Resuming with offsets: {offsets}")
+
         except FileNotFoundError:
             logger.info("No checkpoint found. Starting fresh.")
 
         offsets_positions = {connector.source_name:[] for connector in self.connectors}
-        
+
+        current_offsets = saved_offsets.copy()
+        current_queries = saved_queries.copy()
+
         for connector in self.connectors:
+            source = connector.source_name
             try:
                 # Calculate share per connector
                 limit_per_source = int(fetch_limit / len(self.connectors))
-                logger.info(f"Querying {connector.source_name} for {limit_per_source} records...")
+                
+                active_query = current_queries.get(source, query)
+                active_offset = current_offsets.get(source, 0)
+                logger.info(f"Querying {source} for {limit_per_source} records... | Query: '{active_query}' | Offset: {active_offset}")
                 
                 # Fetching
-                current_offset = offsets.get(connector.source_name, 0)
-                logger.info(f"Querying {connector.source_name} starting at offset {current_offset} for {limit_per_source} records...")
-                results = list(connector.search(query, limit=limit_per_source, start_offset=current_offset, uuid_list = processed_ids))
-                logger.info(f"Retrieved {len(results)} records from {connector.source_name}")
+                
+                results = list(connector.search(active_query, 
+                        limit=limit_per_source, start_offset=active_offset, uuid_list = processed_ids))
+                logger.info(f"Retrieved {len(results)} records from {source}")
                 if hasattr(connector, 'last_position'):
                     #offsets[connector.source_name] = connector.last_position
-                    offsets_positions[connector.source_name] = connector.last_position
+                    offsets_positions[source] = connector.last_position
                 else:
                     # Fallback for CGSpace if it doesn't have this logic yet
-                    offsets_positions[connector.source_name].append(len(results))
-                    #offsets[connector.source_name] += len(results) 
+                    offsets_positions[source].append(len(results))
+                    #offsets[connector.source_name] += len(results)
+                if hasattr(connector, 'query'):
+                    current_queries[source] = connector.query
                     
                 all_raw_records.extend(results)
             except Exception as e:
-                logger.error(f"Error in {connector.source_name}: {e}")
+                logger.error(f"Error in {source}: {e}")
         
         if not all_raw_records:
             logger.warning("No records found from any source.")
@@ -218,7 +223,7 @@ class Agent1Pipeline:
                 position_datasets_count[record.repository_source] +=1
                 
         
-        self._save_state(query, offsets)
+        self._save_state(current_queries, offsets)
             
         # 4. Output
         # Convert all results (loaded + new) to DataFrame
@@ -234,5 +239,5 @@ class Agent1Pipeline:
 
 if __name__ == "__main__":
     agent = Agent1Pipeline()
-    agent.run(total_target=20)
+    agent.run(total_target=100)
     

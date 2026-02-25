@@ -5,7 +5,7 @@ from tqdm import tqdm
 from typing import Generator, List, Dict, Any, Optional
 from .base import BaseConnector
 from ..core.domain import RawMetadata
-from ...config.settings import CGSPACE_API_URL, CGSPACE_API_URL_METRICS
+from ...config.settings import CGSPACE_API_URL, CGSPACE_API_URL_METRICS, QUERIES
 from ..analysis.utils import get_crossref_citation_count
 
 def cgspace_metrics(uuid:str, metric: str) -> int:
@@ -46,14 +46,14 @@ class CGSpaceConnector(BaseConnector):
         # DSpace 7 Pagination: pages are 0-indexed
         page_size = 20 # Fetch in chunks
         page = start_offset ## // page_size
-        
+        self.query = query
         self.last_position = [page]
         
         items_yielded = 0
         with tqdm(total=limit, desc="Fetching Data", unit="item") as pbar:
             while items_yielded < limit:
                 params = {
-                    "query": query,
+                    "query": self.query,
                     "dsoType": "ITEM",  # Restrict results to Items (ignore Communities/Collections)
                     "page": page,
                     "size": page_size
@@ -92,7 +92,16 @@ class CGSpaceConnector(BaseConnector):
                     # Check if we have reached the total available pages
                     total_pages = search_result.get("page", {}).get("totalPages", 0)
                     if page >= total_pages - 1:
-                        break
+                        pbar.write(f'Search exhausted. Scanned {total_pages} records')
+                        newqueryindex = QUERIES.index(self.query)+1
+                        if newqueryindex>=len(QUERIES): 
+                            pbar.write('all queries were used')
+                            break
+                        self.query = QUERIES[newqueryindex]
+                        pbar.write(f'Search query changed to :{self.query}')
+                        page = 0
+                        self.last_position = [page]
+                        continue
                     
                     page += 1
                     self.last_position.append(page)

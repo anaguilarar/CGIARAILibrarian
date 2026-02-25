@@ -49,3 +49,12 @@ REQUIRED_COLUMNS = [
     "classification_confidence", "classification_explanation", 
     "ranking_score", "repository_source"
 ]
+
+QUERIES = [
+    'climate change',
+    'climate variability',
+    'climate adaptation',
+    'climate-smart agriculture',
+    'extreme weather events',
+    'rainfed agriculture'
+]

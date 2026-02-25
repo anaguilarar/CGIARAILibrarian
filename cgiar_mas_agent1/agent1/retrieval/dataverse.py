@@ -4,10 +4,11 @@ from typing import Generator, Any, Dict, List
 from tqdm import tqdm
 from .base import BaseConnector
 from ..core.domain import RawMetadata
-from ...config.settings import DATAVERSE_API_URL, DATAVERSE_API_URL_METRICS
+from ...config.settings import DATAVERSE_API_URL, DATAVERSE_API_URL_METRICS, QUERIES
 from ..processing.filters import CGIARFilter
 from ..analysis.utils import get_crossref_citation_count
 import copy
+import time
 
 def dataverse_metrics(uuid, metric):
     """_summary_
@@ -34,44 +35,65 @@ class DataverseConnector(BaseConnector):
         self.cgiarfilterer = CGIARFilter()
         self.last_position = []
 
+    def _reset_values(self, start_offset: int = 0):
+        self.start = start_offset
+        self.last_position = [self.start]
+        self.per_page = 20
+        self.consecutive_errors = 0
+
     def search(self, query: str, limit: int = 100, uuid_list = None, start_offset: int = 0) -> Generator[RawMetadata, None, None]:
         """
         Searches Dataverse for items matching the query.
         """
+
         # Dataverse Search API: /api/search?q={query}&start={start}&type=dataset
         
         if uuid_list is None: uuid_listc = set()
         else: uuid_listc = copy.deepcopy(uuid_list)
-        start = start_offset
-        self.last_position = [start]
-        per_page = 10 # Dataverse default is often 10, max is usually 1000 but safest to paginate small
+        
+        self.query = query
+
+        self._reset_values(start_offset)
         items_yielded = 0
-        consecutive_errors = 0
         max_consecutive_errors = 4
+        stagnation_timeout = 60
+        lastyieldtime = time.time()
         with tqdm(total=limit, desc="Fetching Data", unit="item") as pbar:
             while items_yielded < limit:
-                if consecutive_errors > max_consecutive_errors:
+                if self.consecutive_errors > max_consecutive_errors:
                     pbar.write("Too many consecutive 403/Errors. Stopping search to avoid ban.")
                     break
+                
+                currenttime = time.time()
+                elapsed_time = currenttime - lastyieldtime
+                
+                if elapsed_time > stagnation_timeout:
+                    newstart = self.start  + 100
+                    pbar.write(f' Stagnation detected ({int(elapsed_time)}) without valid data, new start ({self.start})')
+                    lastyieldtime = time.time()
+                    self.start = newstart
+                    self.consecutive_errors = 0 
+                    continue
+
                 params = {
-                    "q": query,
+                    "q": self.query,
                     "type": "dataset", # Usually we want datasets, but could also be "file"
-                    "start": start,
-                    "per_page": per_page
+                    "start": self.start,
+                    "per_page": self.per_page
                 }
 
                 try:
-                    response = requests.get(self.api_url, params=params)
+                    response = requests.get(self.api_url, params=params, timeout = 90)
                     if response.status_code == 403:
                         print(response.status_code)
-                        pbar.write(f"403 Forbidden at start index {start}. Skipping batch.")
+                        pbar.write(f"403 Forbidden at start index {self.start}. Skipping batch.")
                         time.sleep(2)
                         # Optimization: Skip the whole page, not just 1 item
-                        start += (per_page)
-                        consecutive_errors += 1
+                        self.start += (self.per_page)
+                        self.consecutive_errors += 1
                         continue
                     
-                    consecutive_errors = 0
+                    self.consecutive_errors = 0
                     response.raise_for_status()
                     data = response.json()
                     
@@ -80,8 +102,10 @@ class DataverseConnector(BaseConnector):
                     results = data.get("data", {}).get("items", [])
                     
                     if not results:
+                        pbar.write('No more results found in Dataverse')
                         break
                     
+
                     ## only the first one is gonna take into account
                     for item in results:
                         if items_yielded >= limit:
@@ -96,25 +120,33 @@ class DataverseConnector(BaseConnector):
                                 uuid_listc.add(rawdata.doi_pid)
                                 items_yielded += 1
                                 pbar.update(1)
-
+                                lastyieldtime = time.time()
                                 yield rawdata
                                 
 
                     # Pagination Check
                     total_count = data.get("data", {}).get("total_count", 0)
-                    if start + len(results) >= total_count:
-                        break
-                        
-                    start += len(results)
-                    self.last_position.append(start)
+                    self.start += len(results)
+                    self.last_position.append(self.start)
                     
+                    if self.start + len(results) >= total_count:
+                        pbar.write(f'Search exhausted. Scanned {total_count} records')
+                        newqueryindex = QUERIES.index(self.query)+1
+                        if newqueryindex>=len(QUERIES): 
+                            pbar.write('all queries were used')
+                            break
+                        self.query = QUERIES[newqueryindex]
+                        pbar.write(f'Search query changed to :{self.query}')
+                        self._reset_values()
+                        continue
+                        
                 except requests.exceptions.RequestException as e:
                     pbar.write(f"Error fetching data from Dataverse: {e}")
                     items_yielded += 1
                     #print(f"Error fetching data from Dataverse: {e}")
-                    start += per_page
-                    self.last_position.append(start)
-                    consecutive_errors += 1
+                    self.start += self.per_page
+                    self.last_position.append(self.start)
+                    self.consecutive_errors += 1
                     time.sleep(1)
                     
                     continue

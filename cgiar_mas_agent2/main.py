@@ -17,6 +17,7 @@ import sys
 import time
 import json
 import os
+import re
 from typing import List
 
 # Ensure we can import modules from strict structure
@@ -50,19 +51,64 @@ logging.basicConfig(
 )
 logger = logging.getLogger("agent2")
 
-def find_country(country_names_list, text):
+def extract_countries_from_text(text, country_set):
+    """
+    Finds countries in text using word boundaries to ensure accuracy.
+    """
+    if not isinstance(text, str):
+        if isinstance(text, list):
+            text = ' '.join(text) # Join lists (like keywords)
+        else:
+            return set()
     
-    iname = 0
-    country_name = set()
-    while iname < len(country_names_list):
-        ref_name = country_names_list[iname]
-        if ref_name.lower() in text.lower():
-            country_name.add(ref_name)
+    found = set()
+    for country in country_set:
+        # \b ensures we match "Niger" but not "Nigeria", "Oman" but not "Woman"
+        if re.search(r'\b' + re.escape(country.lower()) + r'\b', text.lower()):
+            found.add(country.title())
             
-        iname+=1
-    
-    return list(country_name)
+    return found
 
+def process_row(row, country_names_set):
+    """
+    Logic to clean existing country or find it in other columns.
+    """
+    current_country = row['country']
+    
+    
+    if pd.notna(current_country) and str(current_country).strip() != '':
+    
+        parts = [c.strip().lower() for c in str(current_country).split(',')]
+        valid_countries = [c.title() for c in parts if c in country_names_set]
+
+        if valid_countries:
+            uniquecountries = []
+            for cu in valid_countries:
+                if cu not in uniquecountries:
+                    uniquecountries.append(cu)
+                    
+            return ', '.join(uniquecountries)
+
+    found = extract_countries_from_text(row.get('keywords'), country_names_set)
+    if found: return ', '.join(found)
+    
+    found = extract_countries_from_text(row.get('abstract'), country_names_set)
+    if found: return ', '.join(found)
+    
+    found = extract_countries_from_text(row.get('title'), country_names_set)
+    if found: return ', '.join(found)
+    
+    return '' # Return empty string if nothing found
+
+def organize_country_names_column(df, country_names):
+    # Convert list to set for O(1) lookup speed
+    country_names_set = set(name.lower() for name in country_names)
+    
+    # Use apply with axis=1 (Row-wise operation)
+    # This is much faster than iterating rows and rebuilding DataFrames
+    df['country'] = df.apply(lambda row: process_row(row, country_names_set), axis=1)
+    
+    return df
 
 def organize_llm_outputs(llm_outputs):
     if isinstance(llm_outputs, dict):
@@ -98,19 +144,8 @@ class Agent2Pipeline:
         
         total_count = len(df)
         logger.info("Loaded %d records.", total_count)
-        country_names = [country.name.lower() for country in pycountry.countries]
-        newdf = []
-        for i in range(df.shape[0]):
-            rowdata = df.iloc[df.index[i]]
-            if isinstance(rowdata['country'], float) and rowdata['repository_source'] == 'Dataverse':
-                iname = 0
-                countries = find_country(country_names, rowdata['abstract'])
-                if len(countries) == 0:
-                    countries = find_country(country_names, rowdata['title'])
-                if len(countries) > 0:
-                    rowdata['country'] = ', '.join([cn.title() for cn in countries])
-            newdf.append(pd.DataFrame(np.expand_dims(rowdata, axis=0),columns=df.columns.values))
-        df = pd.concat(newdf)
+
+        df = organize_country_names_column(df, settings.COUNTRIES)
     
                     
         # Normalize production_system early
