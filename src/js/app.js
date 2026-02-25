@@ -294,11 +294,16 @@ const app = {
         const parseMarkdown = (text) => {
             if (!text || text.trim() === '' || text === 'Error') return '';
             
+            // 0. Remove markdown asterisks immediately surrounding or preceding HTTP URLs to prevent parsing issues
+            let fixedText = text.replace(/[\* \t]*(https?:\/\/[^\s\*]+)[\* \t]*/g, ' $1 ');
+            // Clean up double spaces caused by the above replacement
+            fixedText = fixedText.replace(/ {2,}/g, ' ');
+            
             // Fix tight bullet points: add double newlines and normal markdown bullets (-)
             // so the markdown parser properly detects them as distinct list items/paragraphs.
-            let fixedText = text.replace(/•\s*/g, '\n\n- ');
+            fixedText = fixedText.replace(/•\s*/g, '\n\n- ');
             
-            // 1. Clean up "Source(s):" or "doi:" prefixes inside parentheses (or outside)
+            // 1. Clean up "Source(s):" or "doi:" prefixes inside parentheses (or outside).
             fixedText = fixedText.replace(/\(\s*(?:Sources?|doi):\s*/gi, '(');
             fixedText = fixedText.replace(/\b(?:Sources?):\s*(https?:\/\/)/gi, '$1');
             
