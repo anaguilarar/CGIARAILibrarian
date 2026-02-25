@@ -294,8 +294,11 @@ const app = {
         const parseMarkdown = (text) => {
             if (!text || text.trim() === '' || text === 'Error') return '';
             
-            // 0. Remove markdown asterisks immediately surrounding or preceding HTTP URLs to prevent parsing issues
-            let fixedText = text.replace(/[\* \t]*(https?:\/\/[^\s\*]+)[\* \t]*/g, ' $1 ');
+            // 0. Remove markdown links [Text](URL) and just keep the URL
+            let fixedText = text.replace(/\[([^\]]*)\]\((https?:\/\/[^\)]+)\)/g, '$2');
+            
+            // 0.5 Remove markdown asterisks immediately surrounding or preceding HTTP URLs to prevent parsing issues
+            fixedText = fixedText.replace(/[\* \t]*(https?:\/\/[^\s\*]+)[\* \t]*/g, ' $1 ');
             // Clean up double spaces caused by the above replacement
             fixedText = fixedText.replace(/ {2,}/g, ' ');
             
