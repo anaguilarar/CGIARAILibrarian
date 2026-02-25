@@ -25,7 +25,6 @@ sys.path.append(".")
 
 
 import pandas as pd
-import pycountry
 import numpy as np
 
 from cgiar_mas_agent2.config import settings

@@ -17,6 +17,7 @@ from cgiar_mas_agent2.agent2.output.schema import (
     IdentifiedGap,
     Profile,
     SynthesisReport,
+    TopPaper,
 )
 
 logger = logging.getLogger(__name__)
@@ -63,9 +64,7 @@ def build_report(
     country_profiles: dict[str, Profile] = {}
     for country, count in country_counts.items():
         narrative = country_narratives.get(country, "")
-        top_dois = [
-            p["doi"] for p in country_top_papers.get(country, [])
-        ]
+        top_dois = country_top_papers.get(country, [])
         try:
             #"https://dataverse.harvard.edu/dataset.xhtml?persistentId="
             narrative = replace_doi(narrative)
@@ -94,9 +93,7 @@ def build_report(
     for system, count in system_counts.items():
         narrative = system_narratives.get(system, "")
         narrative = replace_doi(narrative)
-        top_dois = [
-            p["doi"] for p in system_top_papers.get(system, [])
-        ]
+        top_dois = system_top_papers.get(system, [])
         system_profiles[system] = Profile(
             count=count,
             narrative=narrative["narrative"],

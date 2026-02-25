@@ -19,6 +19,16 @@ class GlobalStats(BaseModel):
     )
 
 
+class TopPaper(BaseModel):
+    doi: str
+    title: str
+    score: float
+    citations: int
+    downloads: int
+    views: int
+    repository: str
+
+
 class Profile(BaseModel):
     """Reusable profile for a country or production system cluster."""
 
@@ -39,9 +49,9 @@ class Profile(BaseModel):
         ...,
         description="3-sentence LLM-generated qualitative summary",
     )
-    top_dois: list[str] = Field(
+    top_dois: list[TopPaper] = Field(
         default_factory=list,
-        description="DOIs of the highest-ranked papers in this cluster",
+        description="Highest-ranked papers in this cluster with metrics",
     )
 
 

@@ -31,8 +31,12 @@ def get_top_papers(
             ...
         }
     """
-    working = df[["title", "doi_pid", "ranking_score", group_col]].copy()
-    working["ranking_score"] = pd.to_numeric(working["ranking_score"], errors="coerce").fillna(0)
+    # Ensure columns exist to avoid KeyError if the CSV is missing them
+    cols_to_extract = ["title", "doi_pid", "ranking_score", group_col, "citation_count", "downloads_count", "total_views", "repository_source"]
+    available_cols = [c for c in cols_to_extract if c in df.columns]
+    working = df[available_cols].copy()
+    if "ranking_score" in working.columns:
+        working["ranking_score"] = pd.to_numeric(working["ranking_score"], errors="coerce").fillna(0)
 
     # Explode multi-valued group column
     sep = ";" if group_col == "ontology_tags" else ","
@@ -51,8 +55,12 @@ def get_top_papers(
         result[str(group_val)] = [
             {
                 "doi": str(row["doi_pid"]),
-                "title": str(row["title"]),
-                "score": round(float(row["ranking_score"]), 2),
+                "title": str(row.get("title", "")),
+                "score": round(float(row.get("ranking_score", 0)), 2),
+                "citations": int(row.get("citation_count", 0)) if pd.notna(row.get("citation_count", 0)) else 0,
+                "downloads": int(row.get("downloads_count", 0)) if pd.notna(row.get("downloads_count", 0)) else 0,
+                "views": int(row.get("total_views", 0)) if pd.notna(row.get("total_views", 0)) else 0,
+                "repository": str(row.get("repository_source", "Unknown")),
             }
             for _, row in top.iterrows()
         ]

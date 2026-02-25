@@ -342,33 +342,99 @@ const app = {
 
         const ontologiesHtml = `
             ${formattedAdaptation ? `
-            <div class="ontology-box" style="margin-top: 16px; padding: 16px; border-radius: 8px; background-color: #f0fdf4; border: 1px solid #bbf7d0;">
-                <h3 style="font-size: 15px; margin-bottom: 8px; color: #166534; font-weight: 600;"><i class="ph ph-leaf" style="margin-right: 6px; position: relative; top: 2px;"></i>Adaptation</h3>
-                <div style="font-size: 14px; color: #14532d; line-height: 1.5;">${formattedAdaptation}</div>
+            <div class="collapsible-section" style="border: 1px solid #bbf7d0;">
+                <div class="collapsible-header" style="background-color: #f0fdf4;" onclick="this.parentElement.classList.toggle('expanded')">
+                    <h3 style="font-size: 15px; margin: 0; color: #166534; font-weight: 600;"><i class="ph ph-leaf" style="margin-right: 6px; position: relative; top: 2px;"></i>Adaptation</h3>
+                    <i class="ph ph-caret-down" style="color: #166534;"></i>
+                </div>
+                <div class="collapsible-content" style="background-color: #f0fdf4;">
+                    <div style="font-size: 14px; color: #14532d; line-height: 1.5; padding-bottom: 20px;">${formattedAdaptation}</div>
+                </div>
             </div>` : ''}
             
             ${formattedMitigation ? `
-            <div class="ontology-box" style="margin-top: 16px; padding: 16px; border-radius: 8px; background-color: #eff6ff; border: 1px solid #bfdbfe;">
-                <h3 style="font-size: 15px; margin-bottom: 8px; color: #1e40af; font-weight: 600;"><i class="ph ph-wind" style="margin-right: 6px; position: relative; top: 2px;"></i>Mitigation</h3>
-                <div style="font-size: 14px; color: #1e3a8a; line-height: 1.5;">${formattedMitigation}</div>
+            <div class="collapsible-section" style="border: 1px solid #bfdbfe; margin-top: 16px;">
+                <div class="collapsible-header" style="background-color: #eff6ff;" onclick="this.parentElement.classList.toggle('expanded')">
+                    <h3 style="font-size: 15px; margin: 0; color: #1e40af; font-weight: 600;"><i class="ph ph-wind" style="margin-right: 6px; position: relative; top: 2px;"></i>Mitigation</h3>
+                    <i class="ph ph-caret-down" style="color: #1e40af;"></i>
+                </div>
+                <div class="collapsible-content" style="background-color: #eff6ff;">
+                    <div style="font-size: 14px; color: #1e3a8a; line-height: 1.5; padding-bottom: 20px;">${formattedMitigation}</div>
+                </div>
             </div>` : ''}
             
             ${formattedWater ? `
-            <div class="ontology-box" style="margin-top: 16px; padding: 16px; border-radius: 8px; background-color: #f0f9ff; border: 1px solid #bae6fd;">
-                <h3 style="font-size: 15px; margin-bottom: 8px; color: #0369a1; font-weight: 600;"><i class="ph ph-drop" style="margin-right: 6px; position: relative; top: 2px;"></i>Water</h3>
-                <div style="font-size: 14px; color: #0c4a6e; line-height: 1.5;">${formattedWater}</div>
+            <div class="collapsible-section" style="border: 1px solid #bae6fd; margin-top: 16px;">
+                <div class="collapsible-header" style="background-color: #f0f9ff;" onclick="this.parentElement.classList.toggle('expanded')">
+                    <h3 style="font-size: 15px; margin: 0; color: #0369a1; font-weight: 600;"><i class="ph ph-drop" style="margin-right: 6px; position: relative; top: 2px;"></i>Water</h3>
+                    <i class="ph ph-caret-down" style="color: #0369a1;"></i>
+                </div>
+                <div class="collapsible-content" style="background-color: #f0f9ff;">
+                    <div style="font-size: 14px; color: #0c4a6e; line-height: 1.5; padding-bottom: 20px;">${formattedWater}</div>
+                </div>
             </div>` : ''}
         `;
 
         // Build DOIs
-        const doisHtml = (profile.top_dois || []).slice(0, 10).map(doi => {
-            const cleanDoi = doi.replace('doi:', '');
-            return `
-                <a href="https://doi.org/${cleanDoi}" target="_blank" class="doi-card">
-                    <i class="ph ph-link"></i>
-                    <span style="font-size: 13px; font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${cleanDoi}</span>
-                </a>
-            `;
+        const doisHtml = (profile.top_dois || []).slice(0, 10).map(doiObj => {
+            const isDict = typeof doiObj === 'object' && doiObj !== null;
+            const doiString = isDict ? (doiObj.doi || '') : (doiObj || '');
+            const cleanDoi = doiString.replace('doi:', '');
+            
+            if (isDict) {
+                const title = doiObj.title || '';
+                const citations = doiObj.citations || 0;
+                const downloads = doiObj.downloads || 0;
+                const views = doiObj.views || 0;
+                const repository = doiObj.repository || '';
+                
+                let sourceClass = '';
+                if (repository.toLowerCase().includes('cgspace')) sourceClass = 'source-cgspace';
+                else if (repository.toLowerCase().includes('dataverse')) sourceClass = 'source-dataverse';
+                
+                return `
+                    <a href="https://doi.org/${cleanDoi}" target="_blank" class="source-card ${sourceClass}">
+                        <div class="source-header">
+                            <i class="ph ph-article"></i>
+                            <span class="source-title" title="${title}">${title || cleanDoi}</span>
+                        </div>
+                        <div class="source-metrics">
+                            <div class="metric citations" title="Citations">
+                                <i class="ph ph-quotes"></i>
+                                <div class="metric-info">
+                                    <span class="metric-value">${citations.toLocaleString()}</span>
+                                    <span class="metric-label">Cites</span>
+                                </div>
+                            </div>
+                            <div class="metric downloads" title="Downloads">
+                                <i class="ph ph-download-simple"></i>
+                                <div class="metric-info">
+                                    <span class="metric-value">${downloads.toLocaleString()}</span>
+                                    <span class="metric-label">Downs</span>
+                                </div>
+                            </div>
+                            <div class="metric views" title="Views">
+                                <i class="ph ph-eye"></i>
+                                <div class="metric-info">
+                                    <span class="metric-value">${views.toLocaleString()}</span>
+                                    <span class="metric-label">Views</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="source-footer">
+                            <i class="ph ph-link"></i>
+                            <span>${cleanDoi}</span>
+                        </div>
+                    </a>
+                `;
+            } else {
+                return `
+                    <a href="https://doi.org/${cleanDoi}" target="_blank" class="doi-card">
+                        <i class="ph ph-link"></i>
+                        <span style="font-size: 13px; font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${cleanDoi}</span>
+                    </a>
+                `;
+            }
         }).join('');
 
         container.innerHTML = `
@@ -388,11 +454,18 @@ const app = {
             </div>
 
             ${profile.top_dois && profile.top_dois.length > 0 ? `
-            <div class="animation-fadeIn" style="animation-delay: 0.2s;">
-                <h3 style="font-size: 16px; margin-bottom: 8px;">Key Source Evidence (DOIs)</h3>
-                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">External links open in a new tab to doi.org resolution service.</p>
-                <div class="doi-list">
-                    ${doisHtml}
+            <div class="collapsible-section animation-fadeIn" style="animation-delay: 0.2s;">
+                <div class="collapsible-header" onclick="this.parentElement.classList.toggle('expanded')">
+                    <div>
+                        <h3 style="font-size: 16px; margin: 0;">Top Source Evidence</h3>
+                        <p style="font-size: 13px; color: var(--text-muted); margin: 4px 0 0 0;">External links open in a new tab to doi.org resolution service.</p>
+                    </div>
+                    <i class="ph ph-caret-down"></i>
+                </div>
+                <div class="collapsible-content">
+                    <div class="doi-list" style="margin-top: 0;">
+                        ${doisHtml}
+                    </div>
                 </div>
             </div>
             ` : ''}
