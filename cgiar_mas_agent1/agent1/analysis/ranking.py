@@ -10,25 +10,31 @@ class Ranker:
 
     def __init__(self):
         self.current_year = datetime.now().year
-        self.MAX_EXPECTED_CITATIONS = 1000
-        self.MAX_EXPECTED_INTERACTIONS = 6000
+        self.MAX_EXPECTED_CITATIONS = 100
+        self.MAX_EXPECTED_INTERACTIONS = 4000
+    
+    def _get_age(self, year: int):
+        if not year: return 1.0
+        return max(1.0, self.current_year - year)
         
         
-    def _normalize_log(self, count: int, max_expected: int) -> float:
-        """Log-scale normalization: log(1 + count) / log(1 + max_expected)."""
+    def _normalize_log(self, value: int, target: int) -> float:
+        """Log-scale normalization: log(1 + value) / log(1 + target)."""
+        if value <= 0: return 0
         # Assumption: 1000 citations is a 'max' reliable signal for normalization score of 1.0
-        return min(math.log(1 + count) / math.log(max_expected+1), 1.0) * 100
+        return math.log(1 + value) / math.log(target+1) * 100
 
-    def _recency_decay(self, year: int) -> float:
+    def _recency_decay(self, age: int) -> float:
         """Inverse decay: 1 / (age + 1). Returns 0-100 scale."""
-        age = max(0, self.current_year - year)
-        return (1 / (age + 1)) * 100
+        decay_rate = 1
+        
+        return math.exp(-decay_rate * age) * 100
 
     def _calculate_usage_score(self, views:int, downloads:int):
         views = views or 0
         downloads = downloads or 0
 
-        weighted_interaction = views + downloads * 3
+        weighted_interaction = views + (downloads * 3)
         
         return self._normalize_log(weighted_interaction, self.MAX_EXPECTED_INTERACTIONS)
         
@@ -37,29 +43,29 @@ class Ranker:
         Returns a scalar score 0-100.
         Adaptive: If citation_count is 0 (common in repository data), reliable weights are shifted.
         """
+        citation_count = citation_count or 0
+        age = self._get_age(year)
         
-        score_citations = self._normalize_log(citation_count, self.MAX_EXPECTED_CITATIONS)
+        citation_velocity = citation_count/age
+        score_citations = self._normalize_log(citation_velocity, self.MAX_EXPECTED_CITATIONS/5)
         score_recency = self._recency_decay(year)
         score_impact = 100.0 if has_doi else 50.0
         score_usage = self._calculate_usage_score(views, downloads)
         score_relevance = llm_confidence * 100
         
-        # Adaptive Weighting
-        if citation_count > 0:
-            
-            w_c = WEIGHT_CITATIONS
-            w_u = WEIGHT_USAGE
-            w_r = WEIGHT_RECENCY
-            w_m = WEIGHT_IMPACT
-            w_rel = WEIGHT_LLMCLASS
-            
-        else:
-            # Standard weights
-            w_c = 0
-            w_u = 0.4  # High importance on views/downloads
-            w_r = 0.25  # High importance on newness
-            w_m = 0.2
-            w_rel = 0.15
+        w_c = WEIGHT_CITATIONS
+        w_u = WEIGHT_USAGE
+        w_r = WEIGHT_RECENCY
+        w_m = WEIGHT_IMPACT
+        w_rel = WEIGHT_LLMCLASS
+        
+        # if citation_count == 0:
+        #     # Standard weights
+        #     w_c = 0
+        #     w_u = 0.6  # High importance on views/downloads
+        #     w_r = 0.15  # High importance on newness
+        #     w_m = 0.15
+        #     w_rel = 0.1
 
         final_score = (
             (w_c * score_citations) +
