@@ -400,7 +400,7 @@ const app = {
                         </div>
                         <div class="source-metrics">
                             <div class="metric citations" title="Citations">
-                                <i class="ph ph-quotes"></i>
+                                <img src="src/icons/citation.png" alt="Citations" style="width: 18px; height: 18px; opacity: 0.8; object-fit: contain;">
                                 <div class="metric-info">
                                     <span class="metric-value">${citations.toLocaleString()}</span>
                                     <span class="metric-label">Cites</span>

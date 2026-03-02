@@ -78,7 +78,6 @@ def build_report(
             top_dois=top_dois,
         )
         except:
-            print(narrative)
             country_profiles[country] = Profile(
                 count=count,
                 narrative=narrative,

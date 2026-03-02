@@ -1,3 +1,6 @@
 run_agent1_10_times.bat
 test.ipynb
 citations.py
+cgiar_mas_agent1/output/agent1_checkpoint.jsonl
+cgiar_mas_agent1/output/agent1_results.csv
+cgiar_mas_agent1/output/agent1_results_citations.csv

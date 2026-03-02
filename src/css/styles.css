@@ -630,23 +630,23 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Repository Specific Borders */
 .source-card.source-cgspace {
-    border-left-color: var(--secondary); /* Green for CGSpace */
+    border-left-color: #8D1DAD; /* Purple for CGSpace */
 }
 .source-card.source-cgspace:hover {
-    border-color: var(--secondary);
+    border-color: #8D1DAD;
 }
 .source-card.source-cgspace .source-header i {
-    color: var(--secondary);
+    color: #8D1DAD;
 }
 
 .source-card.source-dataverse {
-    border-left-color: #3b82f6; /* Blue for Dataverse */
+    border-left-color: #8C2E2E; /* Red for Dataverse */
 }
 .source-card.source-dataverse:hover {
-    border-color: #3b82f6;
+    border-color: #8C2E2E;
 }
 .source-card.source-dataverse .source-header i {
-    color: #3b82f6;
+    color: #8C2E2E;
 }
 
 .source-header {
@@ -672,8 +672,8 @@ h1, h2, h3, h4, h5, h6 {
     color: var(--primary);
 }
 .source-metrics {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    display: flex;
+    justify-content: center;
     gap: 8px;
     margin-top: 4px;
 }
