@@ -266,6 +266,16 @@ h1, h2, h3, h4, h5, h6 {
     box-shadow: var(--shadow-md);
 }
 
+.metric-card.clickable-card {
+    cursor: pointer;
+}
+
+.metric-card.clickable-card.active-card {
+    border-color: var(--secondary);
+    background: #f0fdfa; /* A light teal for active state */
+    box-shadow: var(--shadow-md);
+}
+
 .metric-card.gradient-card {
     background: linear-gradient(135deg, var(--primary) 0%, #012119 100%);
     color: white;
@@ -278,6 +288,19 @@ h1, h2, h3, h4, h5, h6 {
 .metric-card.gradient-card .metric-icon {
     background: rgba(255,255,255,0.1);
     color: white;
+}
+
+.metric-card.gradient-card.active-card {
+    color: var(--text-main);
+}
+
+.metric-card.gradient-card.active-card h3 {
+    color: var(--text-muted);
+}
+
+.metric-card.gradient-card.active-card .metric-icon {
+    background: rgba(164, 210, 51, 0.1);
+    color: var(--secondary);
 }
 
 .metric-icon {

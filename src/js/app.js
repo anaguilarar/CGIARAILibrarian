@@ -1,6 +1,7 @@
 const app = {
     data: null,
     currentView: 'dashboard',
+    activeTopic: null,
 
     init: async function() {
         this.bindEvents();
@@ -50,6 +51,38 @@ const app = {
                 this.handleSearch(e.target.value.toLowerCase(), 'systems');
             });
         }
+
+        // Topic card clicks
+        document.querySelectorAll('.metric-card.clickable-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                const topic = e.currentTarget.dataset.topic;
+                
+                // Toggle topic
+                if (topic === 'all') {
+                    this.activeTopic = null;
+                } else if (this.activeTopic === topic) {
+                    this.activeTopic = null;
+                } else {
+                    this.activeTopic = topic;
+                }
+                
+                // Update UI visually
+                document.querySelectorAll('.metric-card.clickable-card').forEach(c => c.classList.remove('active-card'));
+                if (this.activeTopic) {
+                    e.currentTarget.classList.add('active-card');
+                } else {
+                    // Activate the Total Records card
+                    const totalCard = document.getElementById('total-records-card');
+                    if (totalCard) totalCard.classList.add('active-card');
+                }
+
+                // Re-render dashboard components that depend on data
+                this.renderDashboard();
+                this.renderMap();
+                this.renderCountriesList();
+                this.renderSystemsList();
+            });
+        });
     },
 
     switchView: function(viewId) {
@@ -108,39 +141,51 @@ const app = {
     },
 
     renderDashboard: function() {
-        const stats = this.data.global_stats;
-        
-        // Populate Top Level Metrics
-        this.animateValue('stat-total', stats.total_count);
-        this.animateValue('stat-adaptation', stats.ontology_breakdown.Adaptation || 0);
-        this.animateValue('stat-mitigation', stats.ontology_breakdown.Mitigation || 0);
-        this.animateValue('stat-water', stats.ontology_breakdown.Water || 0);
+        // We only modify the top lists dynamically. The top header global stats stay constant,
+        // EXCEPT we could modify them, but usually they represent total overall stats. 
+        // We'll leave the 4 global metric cards untouched here because they act as toggles themselves.
+        if (this.data && !this.activeTopic && document.getElementById('stat-total').innerHTML === '0') {
+            const stats = this.data.global_stats;
+            this.animateValue('stat-total', stats.total_count);
+            this.animateValue('stat-adaptation', stats.ontology_breakdown.Adaptation || 0);
+            this.animateValue('stat-mitigation', stats.ontology_breakdown.Mitigation || 0);
+            this.animateValue('stat-water', stats.ontology_breakdown.Water || 0);
+        }
 
-        // Populate Top Countries Preview (Sorted by count)
+        const getDisplayCount = (profile) => {
+            if (!this.activeTopic) return profile.count;
+            return (profile.ontology_breakdown && profile.ontology_breakdown[this.activeTopic]) || 0;
+        };
+
+        // Populate Top Countries Preview (Sorted by display count)
         const topCountries = Object.entries(this.data.country_profiles)
             .filter(([name]) => name !== 'Unknown' && name !== 'N/A')
-            .sort((a,b) => b[1].count - a[1].count)
+            .map(([name, profile]) => ({ name, profile, displayCount: getDisplayCount(profile) }))
+            .filter(item => item.displayCount > 0)
+            .sort((a,b) => b.displayCount - a.displayCount)
             .slice(0, 5);
 
         const countryContainer = document.getElementById('dashboard-top-countries');
-        countryContainer.innerHTML = topCountries.map(([name, profile]) => `
+        countryContainer.innerHTML = topCountries.map(({name, displayCount}) => `
             <div class="list-item-row" onclick="app.openDetail('countries', '${name.replace(/'/g, "\\'")}')">
                 <span class="list-item-name">${name}</span>
-                <span class="list-item-count">${profile.count} Records</span>
+                <span class="list-item-count">${displayCount} Records</span>
             </div>
         `).join('');
 
         // Populate Top Systems Preview
         const topSystems = Object.entries(this.data.system_profiles)
             .filter(([name]) => name !== 'general / cross-cutting' && name !== 'Unknown')
-            .sort((a,b) => b[1].count - a[1].count)
+            .map(([name, profile]) => ({ name, profile, displayCount: getDisplayCount(profile) }))
+            .filter(item => item.displayCount > 0)
+            .sort((a,b) => b.displayCount - a.displayCount)
             .slice(0, 5);
 
         const systemContainer = document.getElementById('dashboard-top-systems');
-        systemContainer.innerHTML = topSystems.map(([name, profile]) => `
+        systemContainer.innerHTML = topSystems.map(({name, displayCount}) => `
             <div class="list-item-row" onclick="app.openDetail('systems', '${name.replace(/'/g, "\\'")}')">
                 <span class="list-item-name">${this.capitalize(name)}</span>
-                <span class="list-item-count">${profile.count} Records</span>
+                <span class="list-item-count">${displayCount} Records</span>
             </div>
         `).join('');
     },
@@ -157,7 +202,13 @@ const app = {
             .filter(([name]) => name !== 'Unknown' && name !== 'N/A');
             
         for(let [name, profile] of countries) {
-            dataArr.push([name, profile.count]);
+            let count = profile.count;
+            if (this.activeTopic) {
+                count = (profile.ontology_breakdown && profile.ontology_breakdown[this.activeTopic]) || 0;
+            }
+            if (count > 0) {
+                dataArr.push([name, count]);
+            }
         }
         
         var data = google.visualization.arrayToDataTable(dataArr);
@@ -196,34 +247,48 @@ const app = {
     },
 
     renderCountriesList: function() {
+        const getDisplayCount = (profile) => {
+            if (!this.activeTopic) return profile.count;
+            return (profile.ontology_breakdown && profile.ontology_breakdown[this.activeTopic]) || 0;
+        };
+
         const countries = Object.entries(this.data.country_profiles)
-            .sort((a,b) => b[1].count - a[1].count);
+            .map(([name, profile]) => ({ name, profile, displayCount: getDisplayCount(profile) }))
+            .filter(item => item.displayCount > 0)
+            .sort((a,b) => b.displayCount - a.displayCount);
         
         document.getElementById('country-count').textContent = countries.length;
         
         const container = document.getElementById('country-list');
-        container.innerHTML = countries.map(([name, profile]) => {
+        container.innerHTML = countries.map(({name, displayCount}) => {
             return `
             <div class="list-item-row searchable-item" data-name="${name.toLowerCase()}" onclick="app.showProfileDetail('countries', '${name.replace(/'/g, "\\'")}')">
                 <span class="list-item-name">${name}</span>
-                <span class="list-item-count">${profile.count}</span>
+                <span class="list-item-count">${displayCount}</span>
             </div>
             `;
         }).join('');
     },
 
     renderSystemsList: function() {
+        const getDisplayCount = (profile) => {
+            if (!this.activeTopic) return profile.count;
+            return (profile.ontology_breakdown && profile.ontology_breakdown[this.activeTopic]) || 0;
+        };
+
         const systems = Object.entries(this.data.system_profiles)
-            .sort((a,b) => b[1].count - a[1].count);
+            .map(([name, profile]) => ({ name, profile, displayCount: getDisplayCount(profile) }))
+            .filter(item => item.displayCount > 0)
+            .sort((a,b) => b.displayCount - a.displayCount);
         
         document.getElementById('system-count').textContent = systems.length;
         
         const container = document.getElementById('system-list');
-        container.innerHTML = systems.map(([name, profile]) => {
+        container.innerHTML = systems.map(({name, displayCount}) => {
             return `
             <div class="list-item-row searchable-item" data-name="${name.toLowerCase()}" onclick="app.showProfileDetail('systems', '${name.replace(/'/g, "\\'")}')">
                 <span class="list-item-name" style="text-transform: capitalize;">${name}</span>
-                <span class="list-item-count">${profile.count}</span>
+                <span class="list-item-count">${displayCount}</span>
             </div>
             `;
         }).join('');
@@ -420,10 +485,6 @@ const app = {
                                     <span class="metric-label">Views</span>
                                 </div>
                             </div>
-                        </div>
-                        <div class="source-footer">
-                            <i class="ph ph-link"></i>
-                            <span>${cleanDoi}</span>
                         </div>
                     </a>
                 `;

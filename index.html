@@ -78,28 +78,29 @@
                 <!-- View 1: Dashboard (Global Stats) -->
                 <section id="view-dashboard" class="view active">
                     <div class="metrics-grid">
-                        <div class="metric-card gradient-card">
+                        <div class="metric-card gradient-card clickable-card active-card" id="total-records-card" data-topic="all">
                             <div class="metric-icon"><i class="ph ph-files"></i></div>
                             <div class="metric-data">
                                 <h3>Total Records</h3>
                                 <div class="value" id="stat-total">0</div>
                             </div>
                         </div>
-                        <div class="metric-card">
-                            <div class="metric-icon"><i class="ph ph-thermometer-sun"></i></div>
+                        <div class="metric-card clickable-card" data-topic="Adaptation">
+                            
+                            <div class="metric-icon"> <img src="src/icons/adaptation.png" alt="Adaptation" style="width: 28px; height: 28px; opacity: 0.8; object-fit: contain;"></div>
                             <div class="metric-data">
                                 <h3>Adaptation</h3>
                                 <div class="value" id="stat-adaptation">0</div>
                             </div>
                         </div>
-                        <div class="metric-card">
+                        <div class="metric-card clickable-card" data-topic="Mitigation">
                             <div class="metric-icon"><i class="ph ph-cloud-arrow-down"></i></div>
                             <div class="metric-data">
                                 <h3>Mitigation</h3>
                                 <div class="value" id="stat-mitigation">0</div>
                             </div>
                         </div>
-                        <div class="metric-card">
+                        <div class="metric-card clickable-card" data-topic="Water">
                             <div class="metric-icon"><i class="ph ph-drop"></i></div>
                             <div class="metric-data">
                                 <h3>Water</h3>
@@ -108,16 +109,6 @@
                         </div>
                     </div>
 
-                    <!-- Map Section -->
-                    <div class="glass-panel" style="margin-bottom: 32px;">
-                        <div class="section-header">
-                            <h3>Global Research Distribution</h3>
-                            <button class="btn-ghost" onclick="app.switchView('countries')">View List <i class="ph ph-arrow-right"></i></button>
-                        </div>
-                        <div id="regions_div" style="width: 100%; height: 450px; border-radius: 12px; overflow: hidden; background: #f8fafc; display: flex; align-items: center; justify-content: center;">
-                            <span style="color: var(--text-muted);"><i class="ph ph-spinner ph-spin"></i> Loading map...</span>
-                        </div>
-                    </div>
 
                     <div class="dashboard-content">
                         <div class="chart-section glass-panel">
@@ -139,6 +130,17 @@
                             </div>
                         </div>
                     </div>
+                                        <!-- Map Section -->
+                    <div class="glass-panel" style="margin-bottom: 32px;">
+                        <div class="section-header">
+                            <h3>Global Research Distribution</h3>
+                            <button class="btn-ghost" onclick="app.switchView('countries')">View List <i class="ph ph-arrow-right"></i></button>
+                        </div>
+                        <div id="regions_div" style="width: 100%; height: 450px; border-radius: 12px; overflow: hidden; background: #f8fafc; display: flex; align-items: center; justify-content: center;">
+                            <span style="color: var(--text-muted);"><i class="ph ph-spinner ph-spin"></i> Loading map...</span>
+                        </div>
+                    </div>
+
                 </section>
 
                 <!-- View 2: Countries -->
