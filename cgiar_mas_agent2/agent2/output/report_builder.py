@@ -46,11 +46,15 @@ def build_report(
     ontology_counts: dict[str, int],
     country_counts: dict[str, int],
     system_counts: dict[str, int],
+    country_dataset_counts: dict[str, int],
+    system_dataset_counts: dict[str, int],
     heatmap: dict[str, dict[str, int]],
     country_narratives: dict[str, str],
     system_narratives: dict[str, str],
     country_top_papers: dict[str, list[dict]],
     system_top_papers: dict[str, list[dict]],
+    country_top_datasets: dict[str, list[dict]],
+    system_top_datasets: dict[str, list[dict]],
     gaps: list[dict],
 ) -> SynthesisReport:
     """Assemble all layer outputs into a single ``SynthesisReport``."""
@@ -65,27 +69,32 @@ def build_report(
     for country, count in country_counts.items():
         narrative = country_narratives.get(country, "")
         top_dois = country_top_papers.get(country, [])
+        top_datasets = country_top_datasets.get(country, [])
+        dataset_count = country_dataset_counts.get(country, 0)
         try:
-            #"https://dataverse.harvard.edu/dataset.xhtml?persistentId="
             narrative = replace_doi(narrative)
 
             country_profiles[country] = Profile(
                 count=count,
+                dataset_count=dataset_count,
                 narrative=narrative["narrative"],
                 adaptation=narrative["adaptation"],
                 mitigation=narrative["mitigation"],
                 water=narrative["water"],
-            top_dois=top_dois,
-        )
+                top_dois=top_dois,
+                top_datasets=top_datasets,
+            )
         except:
             country_profiles[country] = Profile(
                 count=count,
+                dataset_count=dataset_count,
                 narrative=narrative,
                 adaptation="",
                 mitigation="",
                 water="",
-            top_dois=top_dois,
-        )
+                top_dois=top_dois,
+                top_datasets=top_datasets,
+            )
 
     # --- System profiles ----------------------------------------------------
     system_profiles: dict[str, Profile] = {}
@@ -93,13 +102,17 @@ def build_report(
         narrative = system_narratives.get(system, "")
         narrative = replace_doi(narrative)
         top_dois = system_top_papers.get(system, [])
+        top_datasets = system_top_datasets.get(system, [])
+        dataset_count = system_dataset_counts.get(system, 0)
         system_profiles[system] = Profile(
             count=count,
+            dataset_count=dataset_count,
             narrative=narrative["narrative"],
             adaptation=narrative["adaptation"],
             mitigation=narrative["mitigation"],
             water=narrative["water"],
             top_dois=top_dois,
+            top_datasets=top_datasets,
         )
 
     # --- Gaps ---------------------------------------------------------------

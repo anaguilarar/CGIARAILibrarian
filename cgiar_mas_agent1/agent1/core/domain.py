@@ -16,6 +16,7 @@ class RawMetadata(BaseModel):
     citation_count: int = 0
     downloads_count: int = 0
     total_views: int = 0
+    is_dataset: bool = False
     repository_source: str
     raw_source_data: Optional[dict] = None
 

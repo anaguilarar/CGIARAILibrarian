@@ -33,6 +33,7 @@ class Profile(BaseModel):
     """Reusable profile for a country or production system cluster."""
 
     count: int = Field(..., description="Number of records in this cluster")
+    dataset_count: int = Field(default=0, description="Number of dataset records in this cluster")
     narrative: str = Field(
         ...,
         description="3-sentence LLM-generated qualitative summary",
@@ -52,6 +53,10 @@ class Profile(BaseModel):
     top_dois: list[TopPaper] = Field(
         default_factory=list,
         description="Highest-ranked papers in this cluster with metrics",
+    )
+    top_datasets: list[TopPaper] = Field(
+        default_factory=list,
+        description="Highest-ranked datasets in this cluster with metrics",
     )
 
 

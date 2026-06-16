@@ -183,6 +183,9 @@ class CGSpaceConnector(BaseConnector):
         # Check for DOI or Handle
         doi_pid = get_meta("cg.identifier.doi") or get_meta("dc.identifier.doi") or item_data.get("handle") or ""
 
+        dc_type = (get_meta("dc.type") or "").lower()
+        is_dataset = "dataset" in dc_type
+
         return RawMetadata(
             title=get_meta("dc.title") or "Untitled",
             abstract=abstract,
@@ -195,6 +198,7 @@ class CGSpaceConnector(BaseConnector):
             citation_count=0,
             total_views = 0,
             downloads_count = 0,
+            is_dataset=is_dataset,
             repository_source="CGSpace",
-            raw_source_data=item_data 
+            raw_source_data=item_data
         )

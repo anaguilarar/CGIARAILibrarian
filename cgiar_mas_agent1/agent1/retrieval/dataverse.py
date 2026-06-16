@@ -208,8 +208,9 @@ class DataverseConnector(BaseConnector):
             keywords=keywords,
             year=year,
             citation_count=0,
-            downloads_count=0, # Placeholder
-            total_views=0,     # Placeholder
+            downloads_count=0,
+            total_views=0,
+            is_dataset=True,
             doi_pid=item.get("global_id", ""),
             repository_source="Dataverse",
             raw_source_data=item

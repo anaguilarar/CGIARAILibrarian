@@ -440,6 +440,64 @@ const app = {
             </div>` : ''}
         `;
 
+        // Build Datasets
+        const datasetsHtml = (profile.top_datasets || []).slice(0, 10).map(doiObj => {
+            const isDict = typeof doiObj === 'object' && doiObj !== null;
+            const doiString = isDict ? (doiObj.doi || '') : (doiObj || '');
+            const cleanDoi = doiString.replace('doi:', '');
+
+            if (isDict) {
+                const title = doiObj.title || '';
+                const citations = doiObj.citations || 0;
+                const downloads = doiObj.downloads || 0;
+                const views = doiObj.views || 0;
+                const repository = doiObj.repository || '';
+
+                let sourceClass = '';
+                if (repository.toLowerCase().includes('cgspace')) sourceClass = 'source-cgspace';
+                else if (repository.toLowerCase().includes('dataverse')) sourceClass = 'source-dataverse';
+
+                return `
+                    <a href="https://doi.org/${cleanDoi}" target="_blank" class="source-card ${sourceClass}">
+                        <div class="source-header">
+                            <i class="ph ph-database"></i>
+                            <span class="source-title" title="${title}">${title || cleanDoi}</span>
+                        </div>
+                        <div class="source-metrics">
+                            <div class="metric citations" title="Citations">
+                                <img src="src/icons/citation.png" alt="Citations" style="width: 18px; height: 18px; opacity: 0.8; object-fit: contain;">
+                                <div class="metric-info">
+                                    <span class="metric-value">${citations.toLocaleString()}</span>
+                                    <span class="metric-label">Cites</span>
+                                </div>
+                            </div>
+                            <div class="metric downloads" title="Downloads">
+                                <i class="ph ph-download-simple"></i>
+                                <div class="metric-info">
+                                    <span class="metric-value">${downloads.toLocaleString()}</span>
+                                    <span class="metric-label">Downs</span>
+                                </div>
+                            </div>
+                            <div class="metric views" title="Views">
+                                <i class="ph ph-eye"></i>
+                                <div class="metric-info">
+                                    <span class="metric-value">${views.toLocaleString()}</span>
+                                    <span class="metric-label">Views</span>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                `;
+            } else {
+                return `
+                    <a href="https://doi.org/${cleanDoi}" target="_blank" class="doi-card">
+                        <i class="ph ph-database"></i>
+                        <span style="font-size: 13px; font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${cleanDoi}</span>
+                    </a>
+                `;
+            }
+        }).join('');
+
         // Build DOIs
         const doisHtml = (profile.top_dois || []).slice(0, 10).map(doiObj => {
             const isDict = typeof doiObj === 'object' && doiObj !== null;
@@ -498,11 +556,17 @@ const app = {
             }
         }).join('');
 
+        const datasetCount = profile.dataset_count || 0;
+        const datasetBadge = datasetCount > 0
+            ? `<span class="badge" style="background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa;"><i class="ph ph-database" style="margin-right:4px; position:relative; top:2px;"></i>${datasetCount} Dataset${datasetCount !== 1 ? 's' : ''}</span>`
+            : '';
+
         container.innerHTML = `
             <div class="profile-title-area animation-fadeIn">
                 <h2 style="font-size: 32px; text-transform: ${type === 'systems' ? 'capitalize' : 'none'};">${id}</h2>
-                <div class="profile-meta">
+                <div class="profile-meta" style="gap: 8px; flex-wrap: wrap;">
                     <span class="badge">${profile.count} Research Records Analyzed only the top ranked research are included</span>
+                    ${datasetBadge}
                 </div>
             </div>
             
@@ -526,6 +590,23 @@ const app = {
                 <div class="collapsible-content">
                     <div class="doi-list" style="margin-top: 0;">
                         ${doisHtml}
+                    </div>
+                </div>
+            </div>
+            ` : ''}
+
+            ${profile.top_datasets && profile.top_datasets.length > 0 ? `
+            <div class="collapsible-section animation-fadeIn" style="animation-delay: 0.25s; border-color: #fed7aa; margin-top: 16px;">
+                <div class="collapsible-header" style="background: #fff7ed;" onclick="this.parentElement.classList.toggle('expanded')">
+                    <div>
+                        <h3 style="font-size: 16px; margin: 0; color: #c2410c;"><i class="ph ph-database" style="margin-right: 6px; position: relative; top: 2px;"></i>Top Datasets</h3>
+                        <p style="font-size: 13px; color: #9a3412; margin: 4px 0 0 0;">Most popular open datasets — ranked by downloads, views &amp; reuse.</p>
+                    </div>
+                    <i class="ph ph-caret-down" style="color: #c2410c;"></i>
+                </div>
+                <div class="collapsible-content" style="background: #fff7ed;">
+                    <div class="doi-list" style="margin-top: 0;">
+                        ${datasetsHtml}
                     </div>
                 </div>
             </div>

@@ -179,7 +179,18 @@ class Agent2Pipeline:
 
         country_top = get_top_papers(df, "country", n=settings.TOP_N_PAPERS)
         system_top = get_top_papers(df, "production_system", n=settings.TOP_N_PAPERS)
-        logger.info("  Top papers extracted.")
+
+        # Dataset-specific top papers and counts
+        if "is_dataset" in df.columns:
+            df_datasets = df[df["is_dataset"].astype(str).str.lower().isin(["true", "1"])]
+        else:
+            df_datasets = df.iloc[0:0]  # empty
+
+        country_top_datasets = get_top_papers(df_datasets, "country", n=settings.TOP_N_PAPERS) if len(df_datasets) else {}
+        system_top_datasets = get_top_papers(df_datasets, "production_system", n=settings.TOP_N_PAPERS) if len(df_datasets) else {}
+        country_dataset_counts = count_by_column(df_datasets, "country") if len(df_datasets) else {}
+        system_dataset_counts = count_by_column(df_datasets, "production_system") if len(df_datasets) else {}
+        logger.info("  Top papers extracted. %d dataset records found.", len(df_datasets))
 
         # ── 3. Curator layer ─────────────────────────────────────────────────────
         logger.info("── Layer 2: Curator (Qualitative) ──")
@@ -252,11 +263,15 @@ class Agent2Pipeline:
             ontology_counts=ontology_counts,
             country_counts=country_counts,
             system_counts=system_counts,
+            country_dataset_counts=country_dataset_counts,
+            system_dataset_counts=system_dataset_counts,
             heatmap=heatmap,
             country_narratives=country_narratives,
             system_narratives=system_narratives,
             country_top_papers=country_top,
             system_top_papers=system_top,
+            country_top_datasets=country_top_datasets,
+            system_top_datasets=system_top_datasets,
             gaps=all_gaps,
         )
 
