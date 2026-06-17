@@ -25,7 +25,12 @@ import requests
 import pandas as pd
 from pathlib import Path
 
-DATAVERSE_BASE = "https://dataverse.harvard.edu"
+# Maps persistent-ID prefix → Dataverse base URL
+DATAVERSE_REGISTRY = {
+    "10.7910":       "https://dataverse.harvard.edu",   # doi:10.7910/DVN/…
+    "11529":         "https://dataverse.cimmyt.org",    # hdl:11529/…  (CIMMYT)
+    "20.500.11766":  "https://dataverse.cgiar.org",     # hdl:20.500.11766/…
+}
 
 _SPATIAL_TYPES = {
     'image/tiff', 'image/geotiff', 'application/x-netcdf',
@@ -45,22 +50,54 @@ _TABULAR_EXTS  = {'.csv', '.tsv', '.tab', '.xlsx', '.xls', '.dta', '.sav', '.rda
 
 def fetch_metric(doi: str, metric: str) -> int | None:
     """Fetch downloadsTotal or viewsTotal. Returns None on any failure."""
-    url = f"{DATAVERSE_BASE}/api/datasets/:persistentId/makeDataCount/{metric}?persistentId={doi}"
+    base, pid = _resolve(doi)
+    if base is None:
+        return None
+
+    url = f"{base}/api/datasets/:persistentId/makeDataCount/{metric}?persistentId={pid}"
     try:
         r = requests.get(url, timeout=30)
         if r.status_code == 403:
             print(f"\n    [rate-limited on {metric}, backing off 10s]", end="", flush=True)
             time.sleep(10)
-            r = requests.get(url, timeout=30)  # one retry after backoff
+            r = requests.get(url, timeout=30)
         r.raise_for_status()
         return int(r.json().get("data", {}).get(metric) or 0)
     except Exception:
         return None
 
 
+def _resolve(raw_doi: str) -> tuple[str | None, str]:
+    """
+    Return (base_url, clean_pid) for a raw doi_pid value.
+    Handles both doi:10.x/... and hdl:prefix/... formats.
+    Returns (None, raw) if the repository is unknown.
+    """
+    pid = raw_doi.strip()
+
+    # Strip a mistakenly prepended 'doi:' from handle identifiers
+    if pid.lower().startswith("doi:hdl:"):
+        pid = pid[4:]  # → hdl:…
+
+    for prefix, base in DATAVERSE_REGISTRY.items():
+        if prefix in pid:
+            # Ensure doi: prefix only for real DOIs, not handles
+            if pid.startswith("hdl:") or pid.startswith("HDL:"):
+                return base, pid
+            if not pid.lower().startswith("doi:"):
+                pid = f"doi:{pid}"
+            return base, pid
+
+    return None, pid   # unknown repository — skip
+
+
 def detect_type(doi: str) -> str | None:
     """Classify dataset as spatial, tabular, or unstructured. Returns None on failure."""
-    url = f"{DATAVERSE_BASE}/api/datasets/:persistentId/versions/:latest-published/files?persistentId={doi}"
+    base, pid = _resolve(doi)
+    if base is None:
+        return None   # unknown repository, skip silently
+
+    url = f"{base}/api/datasets/:persistentId/versions/:latest-published/files?persistentId={pid}"
     try:
         r = requests.get(url, timeout=30)
         r.raise_for_status()
@@ -104,14 +141,9 @@ def enrich_types_only(csv_path: Path, dry_run: bool = False):
         if not doi:
             continue
 
-        if not doi.lower().startswith("doi:"):
-            doi_param = f"doi:{doi}"
-        else:
-            doi_param = doi
+        print(f"  [{i}/{total}] {doi[:65]}", end="  ", flush=True)
 
-        print(f"  [{i}/{total}] {doi_param[:65]}", end="  ", flush=True)
-
-        dtype = detect_type(doi_param)
+        dtype = detect_type(doi)
         if dtype is not None:
             print(f"type={dtype}")
             if not dry_run:
