@@ -558,12 +558,12 @@ const app = {
 
         const datasetCount = profile.dataset_count || 0;
         const datasetBadge = datasetCount > 0
-            ? `<span class="badge" style="background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa;"><i class="ph ph-database" style="margin-right:4px; position:relative; top:2px;"></i>${datasetCount} Dataset${datasetCount !== 1 ? 's' : ''}</span>`
+            ? `<span class="badge"><i class="ph ph-database" style="margin-right:4px; position:relative; top:2px;"></i>${datasetCount} Dataset${datasetCount !== 1 ? 's' : ''}</span>`
             : '';
 
         container.innerHTML = `
             <div class="profile-title-area animation-fadeIn">
-                <h2 style="font-size: 32px; text-transform: ${type === 'systems' ? 'capitalize' : 'none'};">${id}</h2>
+                <h2 style="text-transform: ${type === 'systems' ? 'capitalize' : 'none'};">${id}</h2>
                 <div class="profile-meta" style="gap: 8px; flex-wrap: wrap;">
                     <span class="badge">${profile.count} Research Records Analyzed only the top ranked research are included</span>
                     ${datasetBadge}
