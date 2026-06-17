@@ -4,3 +4,4 @@ citations.py
 cgiar_mas_agent1/output/agent1_checkpoint.jsonl
 cgiar_mas_agent1/output/agent1_results.csv
 cgiar_mas_agent1/output/agent1_results_citations.csv
+cgiar_mas_agent1/output/agent1_results.csv.bak
