@@ -253,6 +253,7 @@ const app = {
         };
 
         const countries = Object.entries(this.data.country_profiles)
+            .filter(([name]) => name !== 'Unknown' && name !== 'N/A' && name !== '')
             .map(([name, profile]) => ({ name, profile, displayCount: getDisplayCount(profile) }))
             .filter(item => item.displayCount > 0)
             .sort((a,b) => b.displayCount - a.displayCount);
@@ -557,64 +558,80 @@ const app = {
         }).join('');
 
         const datasetCount = profile.dataset_count || 0;
-        const datasetBadge = datasetCount > 0
-            ? `<span class="badge"><i class="ph ph-database" style="margin-right:4px; position:relative; top:2px;"></i>${datasetCount} Dataset${datasetCount !== 1 ? 's' : ''}</span>`
-            : '';
+        const hasDatasets = datasetsHtml.length > 0;
+
+        const datasetsTabContent = hasDatasets ? `
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px; line-height: 1.6;">
+                <i class="ph ph-info" style="margin-right: 4px; position: relative; top: 2px;"></i>
+                Open datasets from Dataverse and CGSpace — ranked by downloads, views and reuse score.
+            </p>
+            <div class="doi-list" style="margin-top: 0;">${datasetsHtml}</div>
+        ` : `
+            <div class="dataset-empty-state">
+                <i class="ph ph-database"></i>
+                <p>No datasets identified for this cluster yet.<br>Re-run Agent 1 to detect datasets from Dataverse and CGSpace.</p>
+            </div>
+        `;
 
         container.innerHTML = `
             <div class="profile-title-area animation-fadeIn">
                 <h2 style="text-transform: ${type === 'systems' ? 'capitalize' : 'none'};">${id}</h2>
                 <div class="profile-meta" style="gap: 8px; flex-wrap: wrap;">
-                    <span class="badge">${profile.count} Research Records Analyzed only the top ranked research are included</span>
-                    ${datasetBadge}
+                    <span class="badge"><i class="ph ph-article" style="margin-right:4px; position:relative; top:2px;"></i>${profile.count} Records</span>
+                    <span class="badge"><i class="ph ph-database" style="margin-right:4px; position:relative; top:2px;"></i>${datasetCount} Dataset${datasetCount !== 1 ? 's' : ''}</span>
                 </div>
-            </div>
-            
-            <div class="synthesized-narrative animation-fadeIn" style="animation-delay: 0.1s;">
-                ${formattedNarrative}
             </div>
 
-            <div class="ontologies-container animation-fadeIn" style="animation-delay: 0.15s; margin-top: 20px; margin-bottom: 24px;">
-                ${ontologiesHtml}
+            <div class="detail-tabs animation-fadeIn" style="animation-delay: 0.05s;">
+                <button class="tab-btn active" onclick="app.switchDetailTab(this, 'research')">
+                    <i class="ph ph-article"></i> Research
+                    <span class="tab-count">${profile.count}</span>
+                </button>
+                <button class="tab-btn" onclick="app.switchDetailTab(this, 'datasets')">
+                    <i class="ph ph-database"></i> Datasets
+                    <span class="tab-count">${datasetCount}</span>
+                </button>
             </div>
 
-            ${profile.top_dois && profile.top_dois.length > 0 ? `
-            <div class="collapsible-section animation-fadeIn" style="animation-delay: 0.2s;">
-                <div class="collapsible-header" onclick="this.parentElement.classList.toggle('expanded')">
-                    <div>
-                        <h3 style="font-size: 16px; margin: 0;">Top Source Evidence</h3>
-                        <p style="font-size: 13px; color: var(--text-muted); margin: 4px 0 0 0;">External links open in a new tab to doi.org resolution service.</p>
-                    </div>
-                    <i class="ph ph-caret-down"></i>
+            <div class="tab-panel" data-tab="research">
+                <div class="synthesized-narrative animation-fadeIn">
+                    ${formattedNarrative}
                 </div>
-                <div class="collapsible-content">
-                    <div class="doi-list" style="margin-top: 0;">
-                        ${doisHtml}
-                    </div>
-                </div>
-            </div>
-            ` : ''}
 
-            ${profile.top_datasets && profile.top_datasets.length > 0 ? `
-            <div class="collapsible-section animation-fadeIn" style="animation-delay: 0.25s; border-color: #fed7aa; margin-top: 16px;">
-                <div class="collapsible-header" style="background: #fff7ed;" onclick="this.parentElement.classList.toggle('expanded')">
-                    <div>
-                        <h3 style="font-size: 16px; margin: 0; color: #c2410c;"><i class="ph ph-database" style="margin-right: 6px; position: relative; top: 2px;"></i>Top Datasets</h3>
-                        <p style="font-size: 13px; color: #9a3412; margin: 4px 0 0 0;">Most popular open datasets — ranked by downloads, views &amp; reuse.</p>
-                    </div>
-                    <i class="ph ph-caret-down" style="color: #c2410c;"></i>
+                <div class="ontologies-container animation-fadeIn" style="margin-top: 20px; margin-bottom: 24px;">
+                    ${ontologiesHtml}
                 </div>
-                <div class="collapsible-content" style="background: #fff7ed;">
-                    <div class="doi-list" style="margin-top: 0;">
-                        ${datasetsHtml}
+
+                ${profile.top_dois && profile.top_dois.length > 0 ? `
+                <div class="collapsible-section animation-fadeIn">
+                    <div class="collapsible-header" onclick="this.parentElement.classList.toggle('expanded')">
+                        <div>
+                            <h3 style="font-size: 16px; margin: 0;">Top Source Evidence</h3>
+                            <p style="font-size: 13px; color: var(--text-muted); margin: 4px 0 0 0;">External links open in a new tab to doi.org resolution service.</p>
+                        </div>
+                        <i class="ph ph-caret-down"></i>
                     </div>
-                </div>
+                    <div class="collapsible-content">
+                        <div class="doi-list" style="margin-top: 0;">${doisHtml}</div>
+                    </div>
+                </div>` : ''}
             </div>
-            ` : ''}
+
+            <div class="tab-panel hidden" data-tab="datasets">
+                ${datasetsTabContent}
+            </div>
         `;
-        
+
         // Reset scroll position
         container.scrollTop = 0;
+    },
+
+    switchDetailTab: function(btn, tabId) {
+        const panel = btn.closest('.detail-panel');
+        panel.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        panel.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+        panel.querySelector(`.tab-panel[data-tab="${tabId}"]`).classList.remove('hidden');
     },
 
     handleSearch: function(term, targetView) {

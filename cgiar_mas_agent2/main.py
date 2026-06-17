@@ -50,54 +50,117 @@ logging.basicConfig(
 )
 logger = logging.getLogger("agent2")
 
+# Adjective/demonym → canonical country name
+# Covers the most common forms found in CGIAR agricultural research abstracts
+DEMONYMS: dict[str, str] = {
+    "ethiopian": "Ethiopia", "kenyan": "Kenya", "nigerian": "Nigeria",
+    "vietnamese": "Vietnam", "tanzanian": "Tanzania", "ugandan": "Uganda",
+    "bangladeshi": "Bangladesh", "nepali": "Nepal", "nepalese": "Nepal",
+    "ghanaian": "Ghana", "senegalese": "Senegal", "malian": "Mali",
+    "nigerien": "Niger", "rwandan": "Rwanda", "mozambican": "Mozambique",
+    "zambian": "Zambia", "zimbabwean": "Zimbabwe", "malawian": "Malawi",
+    "colombian": "Colombia", "honduran": "Honduras", "guatemalan": "Guatemala",
+    "salvadoran": "El Salvador", "nicaraguan": "Nicaragua", "chilean": "Chile",
+    "peruvian": "Peru", "bolivian": "Bolivia", "cambodian": "Cambodia",
+    "philippine": "Philippines", "filipino": "Philippines",
+    "indian": "India", "indonesian": "Indonesia", "pakistani": "Pakistan",
+    "sri lankan": "Sri Lanka", "sudanese": "Sudan",
+    "south sudanese": "South Sudan", "congolese": "Congo",
+    "ivorian": "Côte D'ivoire", "cameroonian": "Cameroon",
+    "burkinabe": "Burkina Faso", "togolese": "Togo", "beninese": "Benin",
+    "somali": "Somalia", "malawian": "Malawi", "namibian": "Namibia",
+    "botswanan": "Botswana", "lesotho": "Lesotho", "swazi": "Eswatini",
+    "myanmar": "Myanmar", "burmese": "Myanmar", "laotian": "Laos",
+    "thai": "Thailand", "chinese": "China", "afghan": "Afghanistan",
+}
+
+# Alternative spellings and abbreviations → canonical country name
+COUNTRY_ALIASES: dict[str, str] = {
+    "viet nam": "Vietnam",
+    "lao pdr": "Laos",
+    "lao people's democratic republic": "Laos",
+    "dr congo": "Congo",
+    "drc": "Congo",
+    "democratic republic of congo": "Congo",
+    "ivory coast": "Côte D'ivoire",
+    "cote d'ivoire": "Côte D'ivoire",
+    "burkina": "Burkina Faso",
+    "swaziland": "Eswatini",
+    "cabo verde": "Cape Verde",
+    "timor-leste": "Timor-Leste",
+    "east timor": "Timor-Leste",
+    "tanzania, united republic of": "Tanzania",
+    "bolivia, plurinational state of": "Bolivia",
+    "iran, islamic republic of": "Iran",
+    "korea, republic of": "South Korea",
+    "syrian arab republic": "Syria",
+    "united republic of tanzania": "Tanzania",
+}
+
+
 def extract_countries_from_text(text, country_set):
     """
-    Finds countries in text using word boundaries to ensure accuracy.
+    Finds countries in text using word boundaries.
+    Also checks demonyms (e.g. 'Ethiopian') and common aliases (e.g. 'Viet Nam').
     """
     if not isinstance(text, str):
         if isinstance(text, list):
-            text = ' '.join(text) # Join lists (like keywords)
+            text = ' '.join(text)
         else:
             return set()
-    
+
+    text_lower = text.lower()
     found = set()
+
+    # 1. Direct country name match
     for country in country_set:
-        # \b ensures we match "Niger" but not "Nigeria", "Oman" but not "Woman"
-        if re.search(r'\b' + re.escape(country.lower()) + r'\b', text.lower()):
+        if re.search(r'\b' + re.escape(country.lower()) + r'\b', text_lower):
             found.add(country.title())
-            
+
+    # 2. Demonym match (e.g. "Ethiopian farmers" → "Ethiopia")
+    for demonym, country_name in DEMONYMS.items():
+        if re.search(r'\b' + re.escape(demonym) + r'\b', text_lower):
+            found.add(country_name)
+
+    # 3. Alias match (e.g. "Viet Nam" → "Vietnam")
+    for alias, country_name in COUNTRY_ALIASES.items():
+        if re.search(r'\b' + re.escape(alias) + r'\b', text_lower):
+            found.add(country_name)
+
     return found
+
 
 def process_row(row, country_names_set):
     """
-    Logic to clean existing country or find it in other columns.
+    Resolves country for a record. Falls back through: metadata → keywords
+    → affiliation → abstract → title.
     """
     current_country = row['country']
-    
-    
+
     if pd.notna(current_country) and str(current_country).strip() != '':
-    
         parts = [c.strip().lower() for c in str(current_country).split(',')]
         valid_countries = [c.title() for c in parts if c in country_names_set]
-
         if valid_countries:
             uniquecountries = []
             for cu in valid_countries:
                 if cu not in uniquecountries:
                     uniquecountries.append(cu)
-                    
             return ', '.join(uniquecountries)
 
     found = extract_countries_from_text(row.get('keywords'), country_names_set)
-    if found: return ', '.join(found)
-    
+    if found: return ', '.join(sorted(found))
+
+    # Affiliation often contains country/institute info (populated for Dataverse records)
+    found = extract_countries_from_text(row.get('affiliation'), country_names_set)
+    if found: return ', '.join(sorted(found))
+
     found = extract_countries_from_text(row.get('abstract'), country_names_set)
-    if found: return ', '.join(found)
-    
+    if found: return ', '.join(sorted(found))
+
     found = extract_countries_from_text(row.get('title'), country_names_set)
-    if found: return ', '.join(found)
-    
-    return '' # Return empty string if nothing found
+    if found: return ', '.join(sorted(found))
+
+    return ''
 
 def organize_country_names_column(df, country_names):
     # Convert list to set for O(1) lookup speed
@@ -184,10 +247,14 @@ class Agent2Pipeline:
         system_ontology_breakdown = get_ontology_breakdown_by_group(df, "production_system")
 
         # Dataset-specific top papers and counts
+        # Prefer explicit is_dataset flag; fall back to Dataverse (which is type=dataset by API contract)
         if "is_dataset" in df.columns:
             df_datasets = df[df["is_dataset"].astype(str).str.lower().isin(["true", "1"])]
+        elif "repository_source" in df.columns:
+            df_datasets = df[df["repository_source"].str.strip().str.lower() == "dataverse"]
+            logger.info("  is_dataset column absent — using Dataverse records (%d) as dataset proxy.", len(df_datasets))
         else:
-            df_datasets = df.iloc[0:0]  # empty
+            df_datasets = df.iloc[0:0]
 
         country_top_datasets = get_top_papers(df_datasets, "country", n=settings.TOP_N_PAPERS) if len(df_datasets) else {}
         system_top_datasets = get_top_papers(df_datasets, "production_system", n=settings.TOP_N_PAPERS) if len(df_datasets) else {}

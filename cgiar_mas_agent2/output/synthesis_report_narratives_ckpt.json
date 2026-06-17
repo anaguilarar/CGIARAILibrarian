@@ -1471,6 +1471,30 @@
       "Water": "• CGIAR reviewed climate change adaptation through the water-energy-food nexus in southern Africa (https://doi.org/10.3390/ijerph15102306).\n• CGIAR examined the biophysical and socioeconomic impacts of climate change on maize production and food security (https://doi.org/10.1108/ijccsm-01-2014-0005).\n• CGIAR analyzed adaptation scenarios to climate change for Sub-Saharan Africa (https://doi.org/10.1016/j.ecolecon.2013.05.006).",
       "synthesis_confidence": 0.95,
       "model_name": "mistral-small3.2:24b"
+    },
+    "Cape Verde": {
+      "narrative": "Narrative generation unavailable. 404 Client Error: Not Found for url: http://localhost:11434/api/generate",
+      "Adaptation": "Error",
+      "Mitigation": "Error",
+      "Water": "Error",
+      "synthesis_confidence": 0.0,
+      "model_name": "mistral-small3.2"
+    },
+    "Côte D'ivoire": {
+      "narrative": "Narrative generation unavailable. 404 Client Error: Not Found for url: http://localhost:11434/api/generate",
+      "Adaptation": "Error",
+      "Mitigation": "Error",
+      "Water": "Error",
+      "synthesis_confidence": 0.0,
+      "model_name": "mistral-small3.2"
+    },
+    "South Korea": {
+      "narrative": "Narrative generation unavailable. 404 Client Error: Not Found for url: http://localhost:11434/api/generate",
+      "Adaptation": "Error",
+      "Mitigation": "Error",
+      "Water": "Error",
+      "synthesis_confidence": 0.0,
+      "model_name": "mistral-small3.2"
     }
   },
   "system": {
