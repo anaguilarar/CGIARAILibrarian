@@ -57,7 +57,7 @@ def sample_top_abstracts(
                 "doi": str(row["doi_pid"]),
                 "title": str(row["title"]),
                 "abstract": str(row["abstract"]),
-                "ontolgy_tags": str(row["ontology_tags"]),
+                "ontology_tags": str(row["ontology_tags"]),
                 "classification_explanation": str(row["classification_explanation"]),
                 "score": round(float(row["ranking_score"]), 2),
             }

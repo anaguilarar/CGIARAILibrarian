@@ -48,7 +48,7 @@ class Ranker:
         
         citation_velocity = citation_count/age
         score_citations = self._normalize_log(citation_velocity, self.MAX_EXPECTED_CITATIONS/5)
-        score_recency = self._recency_decay(year)
+        score_recency = self._recency_decay(age)
         score_impact = 100.0 if has_doi else 50.0
         score_usage = self._calculate_usage_score(views, downloads)
         score_relevance = llm_confidence * 100

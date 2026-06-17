@@ -1,5 +1,5 @@
 from typing import Optional, List
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 import pandas as pd
 
 class RawMetadata(BaseModel):
@@ -30,15 +30,12 @@ class ClassifiedMetadata(RawMetadata):
     ranking_score: float = Field(..., ge=0.0, le=100.0)
     
 
-    @validator('ontology_tags', each_item=True)
+    @field_validator('ontology_tags', mode='before')
+    @classmethod
     def validate_ontology(cls, v):
-        allowed = {'Water', 'Adaptation', 'Mitigation', 'Other', 'Unclassified'}
-        if v not in allowed:
-            # We enforce strict ontology, but 'Other' is fallback.
-            # In practice, LLM might hallucinate, so we could log warning instead of raising error,
-            # but getting the prompt right is better.
-            pass 
-        return v
+        if not isinstance(v, list):
+            return v
+        return [item for item in v]
 
 def to_pandas(records: List[ClassifiedMetadata]) -> pd.DataFrame:
     """Converts list of Pydantic models to the required Pandas DataFrame schema."""

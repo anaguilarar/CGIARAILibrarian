@@ -88,12 +88,12 @@ def build_report(
                 top_dois=top_dois,
                 top_datasets=top_datasets,
             )
-        except:
+        except Exception:
             country_profiles[country] = Profile(
                 count=count,
                 dataset_count=dataset_count,
                 ontology_breakdown=ontology_breakdown,
-                narrative=narrative,
+                narrative=narrative.get("narrative", str(narrative)) if isinstance(narrative, dict) else str(narrative),
                 adaptation="",
                 mitigation="",
                 water="",

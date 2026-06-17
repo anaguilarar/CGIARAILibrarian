@@ -1,6 +1,7 @@
 import re
 import json
 import logging
+import time
 import requests
 from typing import Dict, Any, List
 from ...config.settings import LLM_API_BASE, LLM_MODEL_NAME
@@ -77,74 +78,74 @@ class LLMClassifier:
                 }}
                 """
 
-    def classify(self, title: str, abstract: str, keywords: str) -> Dict[str, Any]:
+    def classify(self, title: str, abstract: str, keywords: str, max_retries: int = 2) -> Dict[str, Any]:
         """
         Returns classification dictionary: {tags, confidence, classification_explanation}.
+        Retries up to max_retries times on transient LLM or network failures.
         """
         if keywords is None:
             keywords = ''
-        
+
         clean_abstract = self._optimize_text(abstract)
         clean_title = title.replace("{", "(").replace("}", ")")
         prompt = self._build_prompt(clean_title, clean_abstract, keywords)
-        
+
         payload = {
-                    "model": self.model,
-                    "prompt": prompt,
-                    "stream": False,
-                    "format": "json",
-                    "options": {
-                        "temperature": 0.0,
-                        "num_ctx": 4096,      # Ensure context window fits abstract
-                        "seed": 42
-                    }}
-        try:
-            
-            response = requests.post(
-                self.api_url, 
-                json=payload,
-                timeout=120
-            )
-            response.raise_for_status()
-            result = response.json()
-            
-            content = result.get("response", "")
-            data = json.loads(content)
-            
-            # 5. Parse Tags
-            tags = data.get("ontology_tags", [])
-            if isinstance(tags, str): 
-                tags = [tags]
-            
-            # 6. Sanitize Tags (Remove hallucinations)
-            valid_ontology = {"Water", "Adaptation", "Mitigation"}
-            clean_tags = [t for t in tags if t in valid_ontology]
-
-            prod_system = data.get("production_system", "General")
-            if not prod_system or prod_system.lower() in ["none", "non", "unknown"]:
-                prod_system = "General"
-
-            explanation = data.get("explanation", "No explanation provided.")
-            if isinstance(explanation, list):
-                explanation = "; ".join([str(i) for i in explanation])
-
-            if isinstance(explanation, dict):
-                explanation = "; ".join([f'{k}: {v}' for k, v in explanation.items()])
-
-            return {
-                "ontology_tags": clean_tags,
-                "production_system": prod_system.lower(),
-                "classification_confidence": float(data.get("classification_confidence", 0.0)),
-                "classification_explanation": explanation,
-                "models_name": self.model
+            "model": self.model,
+            "prompt": prompt,
+            "stream": False,
+            "format": "json",
+            "options": {
+                "temperature": 0.0,
+                "num_ctx": 4096,
+                "seed": 42
             }
-            
-        except json.JSONDecodeError:
-            logger.error(f"LLM produced invalid JSON: {content}")
-            return self._fallback_response()
-        except Exception as e:
-            logger.error(f"LLM Classification failed: {e}")
-            return self._fallback_response()
+        }
+
+        for attempt in range(1, max_retries + 2):
+            try:
+                response = requests.post(self.api_url, json=payload, timeout=120)
+                response.raise_for_status()
+                result = response.json()
+
+                content = result.get("response", "")
+                data = json.loads(content)
+
+                tags = data.get("ontology_tags", [])
+                if isinstance(tags, str):
+                    tags = [tags]
+
+                valid_ontology = {"Water", "Adaptation", "Mitigation"}
+                clean_tags = [t for t in tags if t in valid_ontology]
+
+                prod_system = data.get("production_system", "General")
+                if not prod_system or prod_system.lower() in ["none", "non", "unknown"]:
+                    prod_system = "General"
+
+                explanation = data.get("explanation", "No explanation provided.")
+                if isinstance(explanation, list):
+                    explanation = "; ".join([str(i) for i in explanation])
+                if isinstance(explanation, dict):
+                    explanation = "; ".join([f'{k}: {v}' for k, v in explanation.items()])
+
+                return {
+                    "ontology_tags": clean_tags,
+                    "production_system": prod_system.lower(),
+                    "classification_confidence": float(data.get("classification_confidence", 0.0)),
+                    "classification_explanation": explanation,
+                    "models_name": self.model
+                }
+
+            except json.JSONDecodeError:
+                logger.warning(f"LLM invalid JSON (attempt {attempt}): {content[:200]}")
+            except Exception as e:
+                logger.warning(f"LLM classification failed (attempt {attempt}): {e}")
+
+            if attempt <= max_retries:
+                time.sleep(2)
+
+        logger.error(f"LLM classification failed after {max_retries + 1} attempts for: {title[:60]}")
+        return self._fallback_response()
             
     def _fallback_response(self):
         return {

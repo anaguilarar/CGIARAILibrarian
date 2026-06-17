@@ -40,7 +40,7 @@ class LLMSynthesizer:
 
         return f"""You are the Research Cataloguer for CGIAR.
 
-            Objective: Summarize in one sentece or two the independent research contributions in the area of: '{cluster_name}'.
+            Objective: Summarize in one sentence or two the independent research contributions in the area of: '{cluster_name}'.
             Analyze CGIAR's contribution in '{cluster_name}' separated by Climate Ontology.
             
             Context:
@@ -92,7 +92,7 @@ class LLMSynthesizer:
             doi = a.get('doi', 'N/A')
             if doi not in source_ids:
                 source_ids.append(doi)
-            tags_clean = a.get('ontolgy_tags', [])
+            tags_clean = a.get('ontology_tags', [])
             if isinstance(tags_clean, str):
                 # Basic string cleanup if it comes as string representation of list
                 tags_clean = tags_clean.replace("[", "").replace("]", "").replace("'", "").replace(';',',')
@@ -128,7 +128,7 @@ class LLMSynthesizer:
             "format": "json",
             "options": {
                 "temperature": 0.0,  # Low temperature for factual synthesis
-                "num_ctx": 9492,     # Large context for multiple abstracts
+                "num_ctx": 8192,
                 "seed": 42
             }
         }
