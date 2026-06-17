@@ -27,6 +27,7 @@ class TopPaper(BaseModel):
     downloads: int
     views: int
     repository: str
+    dataset_type: str = "unknown"
 
 
 class Profile(BaseModel):

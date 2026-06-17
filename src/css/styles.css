@@ -768,6 +768,7 @@ h1, h2, h3, h4, h5, h6 {
     display: flex;
     gap: 12px;
     align-items: flex-start;
+    flex-wrap: wrap;
 }
 
 .source-header i {
@@ -775,6 +776,46 @@ h1, h2, h3, h4, h5, h6 {
     font-size: 22px;
     flex-shrink: 0;
     margin-top: 1px;
+}
+
+.dataset-type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+    margin-left: auto;
+    margin-top: 2px;
+}
+.dataset-type-badge i {
+    font-size: 12px;
+    margin-top: 0;
+    flex-shrink: 0;
+}
+.dtype-spatial {
+    background: #E6F4EA;
+    color: #1B6B47;
+    border: 1px solid #B7DFC8;
+}
+.dtype-tabular {
+    background: #E8F0FD;
+    color: #2B5BB5;
+    border: 1px solid #B3CAFA;
+}
+.dtype-unstructured {
+    background: #F5F0E8;
+    color: #7A5C3A;
+    border: 1px solid #DDD0BA;
+}
+.dtype-unknown {
+    background: var(--background);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
 }
 
 .source-title {

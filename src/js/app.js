@@ -442,6 +442,12 @@ const app = {
         `;
 
         // Build Datasets
+        const datasetTypeMeta = {
+            spatial:       { icon: 'ph-map-trifold',   label: 'Spatial',       cls: 'dtype-spatial' },
+            tabular:       { icon: 'ph-table',          label: 'Tabular',       cls: 'dtype-tabular' },
+            unstructured:  { icon: 'ph-file-text',      label: 'Unstructured',  cls: 'dtype-unstructured' },
+            unknown:       { icon: 'ph-question',       label: 'Unknown',       cls: 'dtype-unknown' },
+        };
         const datasetsHtml = (profile.top_datasets || []).slice(0, 10).map(doiObj => {
             const isDict = typeof doiObj === 'object' && doiObj !== null;
             const doiString = isDict ? (doiObj.doi || '') : (doiObj || '');
@@ -453,6 +459,8 @@ const app = {
                 const downloads = doiObj.downloads || 0;
                 const views = doiObj.views || 0;
                 const repository = doiObj.repository || '';
+                const dtype = (doiObj.dataset_type || 'unknown').toLowerCase();
+                const dtMeta = datasetTypeMeta[dtype] || datasetTypeMeta.unknown;
 
                 let sourceClass = '';
                 if (repository.toLowerCase().includes('cgspace')) sourceClass = 'source-cgspace';
@@ -463,6 +471,9 @@ const app = {
                         <div class="source-header">
                             <i class="ph ph-database"></i>
                             <span class="source-title" title="${title}">${title || cleanDoi}</span>
+                            <span class="dataset-type-badge ${dtMeta.cls}" title="Dataset type">
+                                <i class="ph ${dtMeta.icon}"></i>${dtMeta.label}
+                            </span>
                         </div>
                         <div class="source-metrics">
                             <div class="metric citations" title="Citations">

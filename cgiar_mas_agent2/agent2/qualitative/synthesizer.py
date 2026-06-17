@@ -60,7 +60,7 @@ class LLMSynthesizer:
             STRICT Rules for Generation:
             1. **Categorization:** Answer "What has CGIAR done in {cluster_name} for [Category]?" for each of the three categories (Water, Adaptation, Mitigation).
             2. **Independence:** Treat each source as a standalone finding. Do NOT infer chronological links unless explicitly stated.
-            3. **Institutional Voice:** Frame all findings as CGIAR's active work. Use subjects like "CGIAR," "The Center," "Researchers," or specific center names (e.g., "CIP," "CIAT").
+            3. **Institutional Voice:** **MANDATORY:** First check the AUTHORS field of each source for a specific CGIAR center name (e.g., CIAT, ILRI, CIMMYT, IRRI, CIP, ICARDA, ICRAF, IITA, IFPRI, ICRISAT, WorldFish, Bioversity, CIFOR, IWMI, AfricaRice, Alliance of Bioversity International and CIAT). If a center name is present in the AUTHORS field, YOU MUST use that specific name as the subject (e.g., "ILRI developed...", "CIMMYT assessed..."). ONLY use the generic term "CGIAR" when no specific center name can be identified in the AUTHORS field.
             4. **No Meta-Commentary:** **EXTREMELY IMPORTANT:** DO NOT start with "Research in this cluster...", "This dataset...", "The papers...", or "This sample...". Start directly with the actor (e.g., "CGIAR implemented...", "Bioversity developed...").
             5. **No False Connections:** Do NOT use phrases like "building on this," "consequently," "this led to," or "subsequently" between different papers.
             6. **Exclusivity:** If the provided text does not contain evidence for a specific category (e.g., no 'Water' papers), explicitly state "No evidence found in this sample." for that category.
@@ -103,7 +103,9 @@ class LLMSynthesizer:
             # Optimize each abstract to ensure the combined block isn't massive
             clean_abs = self._optimize_text(a.get('abstract', ''), max_chars=1900)
             clean_agent1_explanation = self._optimize_text(a.get('classification_explanation', ''),max_chars = 500)
+            authors_raw = a.get('authors', '')
             entry = f"""SOURCE_ID: {doi}\n
+                        AUTHORS: {authors_raw}\n
                         ONTOLOGY: [{tags_clean}], {clean_agent1_explanation}\n
                         TEXT: {a.get('title', '')}. {clean_abs}\n"""
 

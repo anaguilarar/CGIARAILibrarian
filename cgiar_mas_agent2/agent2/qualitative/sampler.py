@@ -30,7 +30,7 @@ def sample_top_abstracts(
             ...
         }
     """
-    cols = ["title", "abstract", "doi_pid", "ranking_score", "ontology_tags", "classification_explanation", group_col]
+    cols = ["title", "abstract", "authors", "doi_pid", "ranking_score", "ontology_tags", "classification_explanation", group_col]
     working = df[cols].copy()
     working["ranking_score"] = pd.to_numeric(
         working["ranking_score"], errors="coerce"
@@ -56,6 +56,7 @@ def sample_top_abstracts(
             {
                 "doi": str(row["doi_pid"]),
                 "title": str(row["title"]),
+                "authors": str(row.get("authors", "")),
                 "abstract": str(row["abstract"]),
                 "ontology_tags": str(row["ontology_tags"]),
                 "classification_explanation": str(row["classification_explanation"]),

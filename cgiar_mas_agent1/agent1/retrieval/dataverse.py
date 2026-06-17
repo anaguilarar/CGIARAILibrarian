@@ -11,21 +11,54 @@ import copy
 import time
 
 def dataverse_metrics(uuid, metric):
-    """_summary_
-
-    Args:
-        uuid (_type_): _description_
-        metric (_type_): can be either viewsTotal or downloadsTotal
-
-    Returns:
-        _type_: _description_
-    """
-    dataverse_url = f"{DATAVERSE_API_URL_METRICS}/api/datasets/:persistentId/makeDataCount/{metric}"
-    params = {"persistentId": uuid}
-    response = requests.get(dataverse_url, params=params)
+    """Fetch a single scalar metric (viewsTotal or downloadsTotal) for a dataset."""
+    # Build URL with persistentId inline — requests would URL-encode : and / if passed via params=
+    dataverse_url = f"{DATAVERSE_API_URL_METRICS}/api/datasets/:persistentId/makeDataCount/{metric}?persistentId={uuid}"
+    response = requests.get(dataverse_url)
     response.raise_for_status()
     data = response.json().get('data', {})
     return data.get(metric, None)
+
+
+_SPATIAL_TYPES = {
+    'image/tiff', 'image/geotiff', 'application/x-netcdf',
+    'application/geo+json', 'application/vnd.geo+json',
+    'application/x-hdf', 'application/x-hdf5',
+}
+_SPATIAL_EXTS = {'.tif', '.tiff', '.geotiff', '.shp', '.geojson', '.kml',
+                 '.gpkg', '.nc', '.img', '.grd', '.dem', '.asc', '.prj', '.dbf'}
+_TABULAR_TYPES = {
+    'text/csv', 'text/tab-separated-values', 'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/x-stata', 'application/x-stata-dta',
+    'application/x-spss-sav', 'application/x-r-data',
+}
+_TABULAR_EXTS = {'.csv', '.tsv', '.tab', '.xlsx', '.xls', '.dta', '.sav', '.rdata', '.rds'}
+
+
+def detect_dataset_type_from_files(global_id: str, base_url: str) -> str:
+    """
+    Call the Dataverse files API and classify the dataset as spatial, tabular, or unstructured.
+    Returns one of: "spatial", "tabular", "unstructured".
+    """
+    url = f"{base_url}/api/datasets/:persistentId/versions/:latest-published/files?persistentId={global_id}"
+    response = requests.get(url, timeout=30)
+    response.raise_for_status()
+    files = response.json().get("data", [])
+
+    has_tabular = False
+    for f in files:
+        data_file = f.get("dataFile", {})
+        content_type = (data_file.get("contentType") or "").lower()
+        filename = (data_file.get("filename") or "").lower()
+        ext = "." + filename.rsplit(".", 1)[-1] if "." in filename else ""
+
+        if content_type in _SPATIAL_TYPES or ext in _SPATIAL_EXTS:
+            return "spatial"
+        if data_file.get("tabularData") or content_type in _TABULAR_TYPES or ext in _TABULAR_EXTS:
+            has_tabular = True
+
+    return "tabular" if has_tabular else "unstructured"
     
 
 class DataverseConnector(BaseConnector):
@@ -152,25 +185,24 @@ class DataverseConnector(BaseConnector):
                     continue
                 
     def _enrich_metrics(self, rawdata: RawMetadata, global_id: str):
-        """
-        Helper method to fetch metrics only when necessary.
-        """
+        """Fetch downloads, views, and dataset type for a Dataverse record."""
         try:
-            
             d_count = dataverse_metrics(global_id, "downloadsTotal")
             rawdata.downloads_count = d_count if d_count is not None else 0
-            
+
             v_count = dataverse_metrics(global_id, "viewsTotal")
             rawdata.total_views = v_count if v_count is not None else 0
-            
+
             #if "doi" in global_id:
             #    countv = get_crossref_citation_count(global_id)
             #    rawdata.citation_count = countv if countv is not None else 0
-            
         except Exception as e:
-            print(e)
-            # Fail silently on metrics so we don't lose the paper
-            pass
+            print(f"Metrics fetch failed for {global_id}: {e}")
+
+            try:
+            rawdata.dataset_type = detect_dataset_type_from_files(global_id, DATAVERSE_API_URL_METRICS)
+        except Exception as e:
+            print(f"Dataset type detection failed for {global_id}: {e}")
         
     def _map_to_domain(self, item: Dict[str, Any]) -> RawMetadata:
         """
@@ -211,6 +243,7 @@ class DataverseConnector(BaseConnector):
             downloads_count=0,
             total_views=0,
             is_dataset=True,
+            dataset_type="unknown",
             doi_pid=item.get("global_id", ""),
             repository_source="Dataverse",
             raw_source_data=item
