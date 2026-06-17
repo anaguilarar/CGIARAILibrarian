@@ -30,7 +30,7 @@ import numpy as np
 from cgiar_mas_agent2.config import settings
 
 # Layer 1 — Actuary (Quantitative)
-from cgiar_mas_agent2.agent2.quantitative.counter import count_by_column
+from cgiar_mas_agent2.agent2.quantitative.counter import count_by_column, get_ontology_breakdown_by_group
 from cgiar_mas_agent2.agent2.quantitative.heatmap import build_heatmap, normalize_production_system
 from cgiar_mas_agent2.agent2.quantitative.top_papers import get_top_papers
 
@@ -180,6 +180,9 @@ class Agent2Pipeline:
         country_top = get_top_papers(df, "country", n=settings.TOP_N_PAPERS)
         system_top = get_top_papers(df, "production_system", n=settings.TOP_N_PAPERS)
 
+        country_ontology_breakdown = get_ontology_breakdown_by_group(df, "country")
+        system_ontology_breakdown = get_ontology_breakdown_by_group(df, "production_system")
+
         # Dataset-specific top papers and counts
         if "is_dataset" in df.columns:
             df_datasets = df[df["is_dataset"].astype(str).str.lower().isin(["true", "1"])]
@@ -265,6 +268,8 @@ class Agent2Pipeline:
             system_counts=system_counts,
             country_dataset_counts=country_dataset_counts,
             system_dataset_counts=system_dataset_counts,
+            country_ontology_breakdown=country_ontology_breakdown,
+            system_ontology_breakdown=system_ontology_breakdown,
             heatmap=heatmap,
             country_narratives=country_narratives,
             system_narratives=system_narratives,

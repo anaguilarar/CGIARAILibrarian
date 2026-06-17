@@ -34,6 +34,10 @@ class Profile(BaseModel):
 
     count: int = Field(..., description="Number of records in this cluster")
     dataset_count: int = Field(default=0, description="Number of dataset records in this cluster")
+    ontology_breakdown: dict[str, int] = Field(
+        default_factory=dict,
+        description="Record count per ontology tag (Adaptation, Mitigation, Water) for this cluster",
+    )
     narrative: str = Field(
         ...,
         description="3-sentence LLM-generated qualitative summary",

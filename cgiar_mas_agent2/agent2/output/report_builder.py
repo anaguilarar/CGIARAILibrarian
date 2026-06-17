@@ -48,6 +48,8 @@ def build_report(
     system_counts: dict[str, int],
     country_dataset_counts: dict[str, int],
     system_dataset_counts: dict[str, int],
+    country_ontology_breakdown: dict[str, dict[str, int]],
+    system_ontology_breakdown: dict[str, dict[str, int]],
     heatmap: dict[str, dict[str, int]],
     country_narratives: dict[str, str],
     system_narratives: dict[str, str],
@@ -71,12 +73,14 @@ def build_report(
         top_dois = country_top_papers.get(country, [])
         top_datasets = country_top_datasets.get(country, [])
         dataset_count = country_dataset_counts.get(country, 0)
+        ontology_breakdown = country_ontology_breakdown.get(country, {})
         try:
             narrative = replace_doi(narrative)
 
             country_profiles[country] = Profile(
                 count=count,
                 dataset_count=dataset_count,
+                ontology_breakdown=ontology_breakdown,
                 narrative=narrative["narrative"],
                 adaptation=narrative["adaptation"],
                 mitigation=narrative["mitigation"],
@@ -88,6 +92,7 @@ def build_report(
             country_profiles[country] = Profile(
                 count=count,
                 dataset_count=dataset_count,
+                ontology_breakdown=ontology_breakdown,
                 narrative=narrative,
                 adaptation="",
                 mitigation="",
@@ -104,9 +109,11 @@ def build_report(
         top_dois = system_top_papers.get(system, [])
         top_datasets = system_top_datasets.get(system, [])
         dataset_count = system_dataset_counts.get(system, 0)
+        ontology_breakdown = system_ontology_breakdown.get(system, {})
         system_profiles[system] = Profile(
             count=count,
             dataset_count=dataset_count,
+            ontology_breakdown=ontology_breakdown,
             narrative=narrative["narrative"],
             adaptation=narrative["adaptation"],
             mitigation=narrative["mitigation"],
