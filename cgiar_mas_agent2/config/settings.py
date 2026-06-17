@@ -125,7 +125,8 @@ PRIORITY_TARGETS: list[str] = [
 
 # ── LLM settings (mirrors Agent 1) ──────────────────────────────────────────
 LLM_BACKEND = os.getenv("LLM_BACKEND", "ollama")
-LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME", "ministral-3:14b")
+#LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME", "ministral-3:14b")
+LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME", "mistral-small3.2")
 LLM_API_BASE = os.getenv("LLM_API_BASE", "http://localhost:11434")
 
 

@@ -18,9 +18,10 @@ DATAVERSE_API_URL_METRICS = os.getenv("DATAVERSE_API_URL_METRICS", "https://data
 # Options: "ollama", "llama-cpp-python", "mock"
 LLM_BACKEND = os.getenv("LLM_BACKEND", "ollama") 
 #LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME", "ministral-3:latest")
-LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME", "ministral-3:14b")
+#LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME", "ministral-3:14b")
 #LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME", "gemma3:4b")
 #LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME", "qwen3:8b")
+LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME", "mistral-small3.2")
 LLM_API_BASE = os.getenv("LLM_API_BASE", "http://localhost:11434")
 
 # CGIAR Centers Data
