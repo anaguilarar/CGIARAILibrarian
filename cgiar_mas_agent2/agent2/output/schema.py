@@ -28,6 +28,7 @@ class TopPaper(BaseModel):
     views: int
     repository: str
     dataset_type: str = "unknown"
+    ontology_tags: list[str] = Field(default_factory=list)
 
 
 class Profile(BaseModel):
@@ -90,3 +91,7 @@ class SynthesisReport(BaseModel):
     system_profiles: dict[str, Profile] = Field(default_factory=dict)
     heatmap: dict[str, dict[str, int]] = Field(default_factory=dict)
     identified_gaps: list[IdentifiedGap] = Field(default_factory=list)
+    global_top_datasets: dict[str, list[TopPaper]] = Field(
+        default_factory=dict,
+        description="Global top datasets by metric: most_downloaded, most_cited, most_viewed",
+    )

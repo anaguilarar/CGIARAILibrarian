@@ -32,7 +32,7 @@ def get_top_papers(
         }
     """
     # Ensure columns exist to avoid KeyError if the CSV is missing them
-    cols_to_extract = ["title", "doi_pid", "ranking_score", group_col, "citation_count", "downloads_count", "total_views", "repository_source", "dataset_type"]
+    cols_to_extract = ["title", "doi_pid", "ranking_score", group_col, "citation_count", "downloads_count", "total_views", "repository_source", "dataset_type", "ontology_tags"]
     available_cols = [c for c in cols_to_extract if c in df.columns]
     working = df[available_cols].copy()
     if "ranking_score" in working.columns:
@@ -62,6 +62,7 @@ def get_top_papers(
                 "views": int(row.get("total_views", 0)) if pd.notna(row.get("total_views", 0)) else 0,
                 "repository": str(row.get("repository_source", "Unknown")),
                 "dataset_type": str(row.get("dataset_type", "unknown")),
+                "ontology_tags": [t.strip() for t in str(row.get("ontology_tags", "")).replace(";", ",").split(",") if t.strip()],
             }
             for _, row in top.iterrows()
         ]

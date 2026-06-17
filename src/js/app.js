@@ -96,12 +96,15 @@ const app = {
             view.classList.toggle('active', view.id === `view-${viewId}`);
         });
 
+        if (viewId === 'datasets') this.renderDatasetsView();
+
         // Update titles
         const titles = {
             'dashboard': 'Global Overview',
             'countries': 'Country Synthesis',
-            'systems': 'Production Systems',
-            'gaps': 'Evidence Gaps'
+            'systems':   'Production Systems',
+            'datasets':  'Open Datasets',
+            'gaps':      'Evidence Gaps',
         };
         document.getElementById('page-title').textContent = titles[viewId] || 'Dashboard';
         
@@ -683,7 +686,209 @@ const app = {
 
     capitalize: function(str) {
         return str.replace(/\b\w/g, l => l.toUpperCase());
-    }
+    },
+
+    // ── Datasets View ────────────────────────────────────────────────────────
+
+    _dsState: {
+        ranking: 'most_downloaded',
+        typeFilter: 'all',
+        topicFilter: 'all',
+    },
+
+    renderDatasetsView: function() {
+        const root = document.getElementById('datasets-view-root');
+        if (!root || !this.data) return;
+
+        const pool = this.data.global_top_datasets || {};
+        const allLists = Object.values(pool).flat();
+        const unique = [...new Map(allLists.map(d => [d.doi, d])).values()];
+
+        // Type counts
+        const typeCounts = { spatial: 0, tabular: 0, unstructured: 0, unknown: 0 };
+        unique.forEach(d => { const t = d.dataset_type || 'unknown'; if (typeCounts[t] !== undefined) typeCounts[t]++; else typeCounts.unknown++; });
+
+        // Ontology intersection counts (from full pool)
+        const count = (t1, t2) => unique.filter(d => (d.ontology_tags||[]).includes(t1) && (d.ontology_tags||[]).includes(t2)).length;
+        const countSingle = (t) => unique.filter(d => { const tags = d.ontology_tags||[]; return tags.includes(t) && tags.length === 1; }).length;
+        const countMulti  = () => unique.filter(d => (d.ontology_tags||[]).length > 1).length;
+
+        const dtMeta = {
+            spatial:      { icon: 'ph-map-trifold', label: 'Spatial',      cls: 'dtype-spatial',      color: '#1B6B47' },
+            tabular:      { icon: 'ph-table',        label: 'Tabular',      cls: 'dtype-tabular',      color: '#2B5BB5' },
+            unstructured: { icon: 'ph-file-text',    label: 'Unstructured', cls: 'dtype-unstructured', color: '#7A5C3A' },
+            unknown:      { icon: 'ph-question',     label: 'Unknown',      cls: 'dtype-unknown',      color: '#9CA3AF' },
+        };
+
+        root.innerHTML = `
+            <!-- Type stat cards -->
+            <div class="ds-stat-grid">
+                <div class="ds-stat-card">
+                    <div class="ds-stat-icon" style="background:#F0F7F4"><i class="ph ph-database" style="color:#0B3D2E"></i></div>
+                    <div>
+                        <div class="ds-stat-value">${unique.length}</div>
+                        <div class="ds-stat-label">Total in ranking</div>
+                    </div>
+                </div>
+                ${['spatial','tabular','unstructured'].map(t => `
+                <div class="ds-stat-card">
+                    <div class="ds-stat-icon" style="background:${t==='spatial'?'#E6F4EA':t==='tabular'?'#E8F0FD':'#F5F0E8'}">
+                        <i class="ph ${dtMeta[t].icon}" style="color:${dtMeta[t].color}"></i>
+                    </div>
+                    <div>
+                        <div class="ds-stat-value">${typeCounts[t]}</div>
+                        <div class="ds-stat-label">${dtMeta[t].label}</div>
+                    </div>
+                </div>`).join('')}
+            </div>
+
+            <!-- Filters + Intersection summary -->
+            <div class="glass-panel ds-filters-panel">
+                <div class="ds-filter-row">
+                    <span class="ds-filter-label">Type</span>
+                    <div class="ds-filter-group">
+                        ${['all','spatial','tabular','unstructured'].map(t => `
+                        <button class="ds-filter-btn ${this._dsState.typeFilter===t?'active':''} ${t!=='all'?'dtype-btn-'+t:''}"
+                            onclick="app.setDsFilter('type','${t}')">
+                            ${t!=='all'?`<i class="ph ${dtMeta[t]?.icon}"></i>`:''}
+                            ${this.capitalize(t)}
+                        </button>`).join('')}
+                    </div>
+                </div>
+                <div class="ds-filter-row">
+                    <span class="ds-filter-label">Topic</span>
+                    <div class="ds-filter-group">
+                        ${['all','Adaptation','Mitigation','Water','multi'].map(t => `
+                        <button class="ds-filter-btn ${this._dsState.topicFilter===t?'active':''} ${t!=='all'?'topic-btn-'+t.toLowerCase():''}"
+                            onclick="app.setDsFilter('topic','${t}')">
+                            ${t==='multi'?'<i class="ph ph-intersect"></i> Multi-topic':
+                              t==='all'?'All Topics':
+                              `<span class="topic-dot topic-dot-${t.toLowerCase()}"></span>${t}`}
+                        </button>`).join('')}
+                    </div>
+                </div>
+                <div class="ds-intersections">
+                    <span class="ds-inter-label">Cross-cutting:</span>
+                    ${[
+                        ['Adaptation','Water',    count('Adaptation','Water'),    'adapt-water'],
+                        ['Adaptation','Mitigation',count('Adaptation','Mitigation'),'adapt-mitig'],
+                        ['Mitigation','Water',    count('Mitigation','Water'),    'mitig-water'],
+                    ].filter(([,,n])=>n>0).map(([t1,t2,n,cls])=>`
+                    <span class="ds-inter-pill ds-inter-${cls}">
+                        <span class="topic-dot topic-dot-${t1.toLowerCase()}"></span>${t1}
+                        <span style="opacity:0.5;margin:0 2px">+</span>
+                        <span class="topic-dot topic-dot-${t2.toLowerCase()}"></span>${t2}
+                        <strong>${n}</strong>
+                    </span>`).join('')}
+                    ${countMulti()>0?`<span class="ds-inter-pill" style="background:var(--background);border:1px solid var(--border)">
+                        <i class="ph ph-intersect" style="font-size:11px"></i> Multi-topic <strong>${countMulti()}</strong>
+                    </span>`:''}
+                </div>
+            </div>
+
+            <!-- Rankings panel -->
+            <div class="glass-panel" style="padding:0;overflow:hidden">
+                <div class="ds-ranking-tabs">
+                    ${[['most_downloaded','ph-download-simple','Most Downloaded'],
+                       ['most_cited',     'ph-quotes',        'Most Cited'],
+                       ['most_viewed',    'ph-eye',           'Most Viewed']].map(([key,icon,label])=>`
+                    <button class="ds-rank-tab ${this._dsState.ranking===key?'active':''}"
+                        onclick="app.setDsFilter('ranking','${key}')">
+                        <i class="ph ${icon}"></i>${label}
+                    </button>`).join('')}
+                </div>
+                <div id="ds-cards-container" style="padding:20px">
+                    ${this._renderDsCards()}
+                </div>
+            </div>
+        `;
+    },
+
+    _renderDsCards: function() {
+        const pool = (this.data?.global_top_datasets || {})[this._dsState.ranking] || [];
+
+        const filtered = pool.filter(d => {
+            const typeOk  = this._dsState.typeFilter === 'all' || (d.dataset_type||'unknown') === this._dsState.typeFilter;
+            const tags    = d.ontology_tags || [];
+            let topicOk   = true;
+            if (this._dsState.topicFilter === 'multi')  topicOk = tags.length > 1;
+            else if (this._dsState.topicFilter !== 'all') topicOk = tags.includes(this._dsState.topicFilter);
+            return typeOk && topicOk;
+        });
+
+        if (!filtered.length) return `
+            <div class="dataset-empty-state">
+                <i class="ph ph-funnel-x"></i>
+                <p>No datasets match the selected filters.</p>
+            </div>`;
+
+        const dtMeta = {
+            spatial:      { icon: 'ph-map-trifold', cls: 'dtype-spatial',      label: 'Spatial' },
+            tabular:      { icon: 'ph-table',        cls: 'dtype-tabular',      label: 'Tabular' },
+            unstructured: { icon: 'ph-file-text',    cls: 'dtype-unstructured', label: 'Unstructured' },
+            unknown:      { icon: 'ph-question',     cls: 'dtype-unknown',      label: 'Unknown' },
+        };
+        const topicColor = { Adaptation: '#1B6B47', Mitigation: '#2B5BB5', Water: '#1A5276' };
+
+        return `<div class="doi-list" style="margin:0">${filtered.map(d => {
+            const cleanDoi = (d.doi||'').replace('doi:','');
+            const dtype    = (d.dataset_type||'unknown').toLowerCase();
+            const dm       = dtMeta[dtype] || dtMeta.unknown;
+            const repo     = d.repository || '';
+            let srcCls = '';
+            if (repo.toLowerCase().includes('cgspace'))    srcCls = 'source-cgspace';
+            else if (repo.toLowerCase().includes('dataverse')) srcCls = 'source-dataverse';
+
+            const ontoBadges = (d.ontology_tags||[]).map(t => `
+                <span class="ds-onto-badge" style="background:${topicColor[t]||'#6B7280'}20;color:${topicColor[t]||'#6B7280'};border-color:${topicColor[t]||'#6B7280'}40">
+                    <span class="topic-dot topic-dot-${t.toLowerCase()}"></span>${t}
+                </span>`).join('');
+
+            return `
+            <a href="https://doi.org/${cleanDoi}" target="_blank" class="source-card ${srcCls}">
+                <div class="source-header">
+                    <i class="ph ph-database"></i>
+                    <span class="source-title" title="${d.title}">${d.title||cleanDoi}</span>
+                    <span class="dataset-type-badge ${dm.cls}">
+                        <i class="ph ${dm.icon}"></i>${dm.label}
+                    </span>
+                </div>
+                ${ontoBadges ? `<div class="ds-onto-row">${ontoBadges}</div>` : ''}
+                <div class="source-metrics">
+                    <div class="metric citations">
+                        <img src="src/icons/citation.png" alt="Citations" style="width:18px;height:18px;opacity:0.8;object-fit:contain;">
+                        <div class="metric-info">
+                            <span class="metric-value">${(d.citations||0).toLocaleString()}</span>
+                            <span class="metric-label">Cites</span>
+                        </div>
+                    </div>
+                    <div class="metric downloads">
+                        <i class="ph ph-download-simple"></i>
+                        <div class="metric-info">
+                            <span class="metric-value">${(d.downloads||0).toLocaleString()}</span>
+                            <span class="metric-label">Downs</span>
+                        </div>
+                    </div>
+                    <div class="metric views">
+                        <i class="ph ph-eye"></i>
+                        <div class="metric-info">
+                            <span class="metric-value">${(d.views||0).toLocaleString()}</span>
+                            <span class="metric-label">Views</span>
+                        </div>
+                    </div>
+                </div>
+            </a>`;
+        }).join('')}</div>`;
+    },
+
+    setDsFilter: function(kind, value) {
+        if (kind === 'ranking')  this._dsState.ranking     = value;
+        if (kind === 'type')     this._dsState.typeFilter   = value;
+        if (kind === 'topic')    this._dsState.topicFilter  = value;
+
+        // Re-render just the filter bar + cards efficiently
+        this.renderDatasetsView();
+    },
 };
 
 // Initialize after DOM load

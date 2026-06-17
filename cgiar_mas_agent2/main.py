@@ -33,6 +33,7 @@ from cgiar_mas_agent2.config import settings
 from cgiar_mas_agent2.agent2.quantitative.counter import count_by_column, get_ontology_breakdown_by_group
 from cgiar_mas_agent2.agent2.quantitative.heatmap import build_heatmap, normalize_production_system
 from cgiar_mas_agent2.agent2.quantitative.top_papers import get_top_papers
+from cgiar_mas_agent2.agent2.quantitative.global_datasets import get_global_top_datasets
 
 
 from cgiar_mas_agent2.agent2.qualitative.sampler import sample_top_abstracts
@@ -260,6 +261,7 @@ class Agent2Pipeline:
         system_top_datasets = get_top_papers(df_datasets, "production_system", n=settings.TOP_N_PAPERS) if len(df_datasets) else {}
         country_dataset_counts = count_by_column(df_datasets, "country") if len(df_datasets) else {}
         system_dataset_counts = count_by_column(df_datasets, "production_system") if len(df_datasets) else {}
+        global_top_datasets = get_global_top_datasets(df_datasets, n=30) if len(df_datasets) else {}
         logger.info("  Top papers extracted. %d dataset records found.", len(df_datasets))
 
         # ── 3. Curator layer ─────────────────────────────────────────────────────
@@ -344,6 +346,7 @@ class Agent2Pipeline:
             system_top_papers=system_top,
             country_top_datasets=country_top_datasets,
             system_top_datasets=system_top_datasets,
+            global_top_datasets=global_top_datasets,
             gaps=all_gaps,
         )
 

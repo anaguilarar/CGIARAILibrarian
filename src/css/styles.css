@@ -1089,6 +1089,189 @@ h1, h2, h3, h4, h5, h6 {
     display: none;
 }
 
+/* ── Datasets View ─────────────────────────────────────────────────────────── */
+
+.ds-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+.ds-stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: var(--shadow-sm);
+}
+.ds-stat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 20px;
+}
+.ds-stat-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-main);
+    font-family: var(--font-heading);
+    line-height: 1;
+}
+.ds-stat-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    font-weight: 500;
+}
+
+.ds-filters-panel {
+    margin-bottom: 24px;
+}
+.ds-filter-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 14px;
+}
+.ds-filter-row:last-of-type { margin-bottom: 0; }
+.ds-filter-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    min-width: 48px;
+}
+.ds-filter-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.ds-filter-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    background: var(--background);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: var(--transition);
+}
+.ds-filter-btn:hover { background: var(--surface); color: var(--text-main); }
+.ds-filter-btn.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+}
+.dtype-btn-spatial.active    { background: #1B6B47; border-color: #1B6B47; }
+.dtype-btn-tabular.active    { background: #2B5BB5; border-color: #2B5BB5; }
+.dtype-btn-unstructured.active { background: #7A5C3A; border-color: #7A5C3A; }
+.topic-btn-adaptation.active { background: #1B6B47; border-color: #1B6B47; }
+.topic-btn-mitigation.active { background: #2B5BB5; border-color: #2B5BB5; }
+.topic-btn-water.active      { background: #1A5276; border-color: #1A5276; }
+.topic-btn-multi.active      { background: var(--accent); border-color: var(--accent); }
+
+.topic-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.topic-dot-adaptation { background: #1B6B47; }
+.topic-dot-mitigation { background: #2B5BB5; }
+.topic-dot-water      { background: #1A5276; }
+
+.ds-intersections {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}
+.ds-inter-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.ds-inter-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-main);
+}
+.ds-inter-adapt-water { background: #E6F4EA; border: 1px solid #B7DFC8; }
+.ds-inter-adapt-mitig { background: #EBF0FB; border: 1px solid #C3D4F5; }
+.ds-inter-mitig-water { background: #E8EFF8; border: 1px solid #B8CCE8; }
+
+.ds-ranking-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+}
+.ds-rank-tab {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: var(--transition);
+    margin-bottom: -1px;
+}
+.ds-rank-tab:hover { color: var(--text-main); background: var(--background); }
+.ds-rank-tab.active {
+    color: var(--primary);
+    border-bottom-color: var(--secondary);
+    background: var(--surface);
+}
+
+.ds-onto-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 6px 0 4px;
+}
+.ds-onto-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    border: 1px solid;
+}
+
+@media (max-width: 900px) {
+    .ds-stat-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
 .dataset-empty-state {
     text-align: center;
     padding: 48px 24px;

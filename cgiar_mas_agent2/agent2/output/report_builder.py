@@ -57,6 +57,7 @@ def build_report(
     system_top_papers: dict[str, list[dict]],
     country_top_datasets: dict[str, list[dict]],
     system_top_datasets: dict[str, list[dict]],
+    global_top_datasets: dict[str, list[dict]],
     gaps: list[dict],
 ) -> SynthesisReport:
     """Assemble all layer outputs into a single ``SynthesisReport``."""
@@ -132,6 +133,7 @@ def build_report(
         system_profiles=system_profiles,
         heatmap=heatmap,
         identified_gaps=identified_gaps,
+        global_top_datasets=global_top_datasets,
     )
 
 
