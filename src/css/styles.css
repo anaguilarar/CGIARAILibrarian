@@ -1173,6 +1173,15 @@ h1, h2, h3, h4, h5, h6 {
     transition: var(--transition);
 }
 .ds-filter-btn:hover { background: var(--surface); color: var(--text-main); }
+.ds-btn-count {
+    background: rgba(0,0,0,0.08);
+    border-radius: 10px;
+    padding: 1px 6px;
+    font-size: 10px;
+    font-weight: 700;
+    margin-left: 2px;
+}
+.ds-filter-btn.active .ds-btn-count { background: rgba(255,255,255,0.25); }
 .ds-filter-btn.active {
     background: var(--primary);
     color: #fff;
