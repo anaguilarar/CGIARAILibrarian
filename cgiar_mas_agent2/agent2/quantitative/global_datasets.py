@@ -18,7 +18,7 @@ def _parse_tags(val) -> list[str]:
     return []
 
 
-def get_global_top_datasets(df: pd.DataFrame, n: int = 30) -> dict[str, list[dict]]:
+def get_global_top_datasets(df: pd.DataFrame, n: int = 100) -> dict[str, list[dict]]:
     """
     Return the top-N datasets globally ranked by each engagement metric.
 

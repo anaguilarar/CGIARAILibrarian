@@ -261,7 +261,7 @@ class Agent2Pipeline:
         system_top_datasets = get_top_papers(df_datasets, "production_system", n=settings.TOP_N_PAPERS) if len(df_datasets) else {}
         country_dataset_counts = count_by_column(df_datasets, "country") if len(df_datasets) else {}
         system_dataset_counts = count_by_column(df_datasets, "production_system") if len(df_datasets) else {}
-        global_top_datasets = get_global_top_datasets(df_datasets, n=30) if len(df_datasets) else {}
+        global_top_datasets = get_global_top_datasets(df_datasets, n=100) if len(df_datasets) else {}
         logger.info("  Top papers extracted. %d dataset records found.", len(df_datasets))
 
         # ── 3. Curator layer ─────────────────────────────────────────────────────
