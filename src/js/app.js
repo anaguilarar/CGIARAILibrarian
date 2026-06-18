@@ -263,18 +263,33 @@ const app = {
             .map(([name, profile]) => ({ name, profile, displayCount: getDisplayCount(profile) }))
             .filter(item => item.displayCount > 0)
             .sort((a,b) => b.displayCount - a.displayCount);
-        
-        document.getElementById('country-count').textContent = countries.length;
-        
+
+        const total = countries.length;
+        document.getElementById('country-count').textContent = total;
+
         const container = document.getElementById('country-list');
-        container.innerHTML = countries.map(({name, displayCount}) => {
-            return `
+        container.innerHTML = countries.map(({name, displayCount}) => `
             <div class="list-item-row searchable-item" data-name="${name.toLowerCase()}" onclick="app.showProfileDetail('countries', '${name.replace(/'/g, "\\'")}')">
                 <span class="list-item-name">${name}</span>
                 <span class="list-item-count">${displayCount}</span>
-            </div>
-            `;
-        }).join('');
+            </div>`).join('');
+
+        // Populate empty state with top suggestions
+        const top5 = countries.slice(0, 5);
+        const emptyEl = document.querySelector('#country-detail .empty-state');
+        if (emptyEl) {
+            emptyEl.innerHTML = `
+                <i class="ph ph-map-pin"></i>
+                <p>Select a country to view synthesized findings.</p>
+                <div class="empty-state-suggestions">
+                    <p class="suggestion-label">Most researched</p>
+                    ${top5.map(({name, displayCount}) => `
+                        <button class="suggestion-item" onclick="app.showProfileDetail('countries','${name.replace(/'/g,"\\'")}')">
+                            <span>${name}</span>
+                            <span class="list-item-count" style="font-size:11px">${displayCount}</span>
+                        </button>`).join('')}
+                </div>`;
+        }
     },
 
     renderSystemsList: function() {
@@ -287,18 +302,33 @@ const app = {
             .map(([name, profile]) => ({ name, profile, displayCount: getDisplayCount(profile) }))
             .filter(item => item.displayCount > 0)
             .sort((a,b) => b.displayCount - a.displayCount);
-        
-        document.getElementById('system-count').textContent = systems.length;
-        
+
+        const total = systems.length;
+        document.getElementById('system-count').textContent = total;
+
         const container = document.getElementById('system-list');
-        container.innerHTML = systems.map(({name, displayCount}) => {
-            return `
+        container.innerHTML = systems.map(({name, displayCount}) => `
             <div class="list-item-row searchable-item" data-name="${name.toLowerCase()}" onclick="app.showProfileDetail('systems', '${name.replace(/'/g, "\\'")}')">
-                <span class="list-item-name" style="text-transform: capitalize;">${name}</span>
+                <span class="list-item-name" style="text-transform:capitalize">${name}</span>
                 <span class="list-item-count">${displayCount}</span>
-            </div>
-            `;
-        }).join('');
+            </div>`).join('');
+
+        // Populate empty state with top suggestions
+        const top5 = systems.slice(0, 5);
+        const emptyEl = document.querySelector('#system-detail .empty-state');
+        if (emptyEl) {
+            emptyEl.innerHTML = `
+                <i class="ph ph-plant"></i>
+                <p>Select a production system to view synthesized findings.</p>
+                <div class="empty-state-suggestions">
+                    <p class="suggestion-label">Most researched</p>
+                    ${top5.map(({name, displayCount}) => `
+                        <button class="suggestion-item" onclick="app.showProfileDetail('systems','${name.replace(/'/g,"\\'")}')">
+                            <span style="text-transform:capitalize">${name}</span>
+                            <span class="list-item-count" style="font-size:11px">${displayCount}</span>
+                        </button>`).join('')}
+                </div>`;
+        }
     },
 
     renderGapsList: function() {
@@ -331,20 +361,13 @@ const app = {
     },
 
     showProfileDetail: function(type, id) {
-        // Highlight active item in list
+        // Highlight active item in list using a CSS class
         const listId = type === 'countries' ? 'country-list' : 'system-list';
-        document.querySelectorAll(`#${listId} .list-item-row`).forEach(row => {
-            row.style.background = '';
-            row.style.borderColor = 'transparent';
-        });
-        
-        // Find the clicked row and highlight it
+        document.querySelectorAll(`#${listId} .list-item-row`).forEach(row => row.classList.remove('active-item'));
         const items = document.querySelectorAll(`#${listId} .searchable-item`);
         for(let item of items) {
             if(item.dataset.name === id.toLowerCase()) {
-                item.style.background = 'white';
-                item.style.borderColor = 'var(--secondary)';
-                item.style.boxShadow = 'var(--shadow-sm)';
+                item.classList.add('active-item');
                 break;
             }
         }
@@ -412,9 +435,12 @@ const app = {
         const formattedMitigation = parseMarkdown(profile.mitigation);
         const formattedWater = parseMarkdown(profile.water);
 
+        // Auto-expand the first available ontology section
+        const firstOntology = formattedAdaptation ? 'adaptation' : formattedMitigation ? 'mitigation' : 'water';
+
         const ontologiesHtml = `
             ${formattedAdaptation ? `
-            <div class="collapsible-section" style="border: 1px solid #bbf7d0;">
+            <div class="collapsible-section${firstOntology === 'adaptation' ? ' expanded' : ''}" style="border: 1px solid #bbf7d0;">
                 <div class="collapsible-header" style="background-color: #f0fdf4;" onclick="this.parentElement.classList.toggle('expanded')">
                     <h3 style="font-size: 15px; margin: 0; color: #166534; font-weight: 600;"><i class="ph ph-leaf" style="margin-right: 6px; position: relative; top: 2px;"></i>Adaptation</h3>
                     <i class="ph ph-caret-down" style="color: #166534;"></i>
@@ -423,9 +449,9 @@ const app = {
                     <div style="font-size: 14px; color: #14532d; line-height: 1.5; padding-bottom: 20px;">${formattedAdaptation}</div>
                 </div>
             </div>` : ''}
-            
+
             ${formattedMitigation ? `
-            <div class="collapsible-section" style="border: 1px solid #bfdbfe; margin-top: 16px;">
+            <div class="collapsible-section${firstOntology === 'mitigation' ? ' expanded' : ''}" style="border: 1px solid #bfdbfe; margin-top: 16px;">
                 <div class="collapsible-header" style="background-color: #eff6ff;" onclick="this.parentElement.classList.toggle('expanded')">
                     <h3 style="font-size: 15px; margin: 0; color: #1e40af; font-weight: 600;"><i class="ph ph-wind" style="margin-right: 6px; position: relative; top: 2px;"></i>Mitigation</h3>
                     <i class="ph ph-caret-down" style="color: #1e40af;"></i>
@@ -436,7 +462,7 @@ const app = {
             </div>` : ''}
             
             ${formattedWater ? `
-            <div class="collapsible-section" style="border: 1px solid #bae6fd; margin-top: 16px;">
+            <div class="collapsible-section${firstOntology === 'water' ? ' expanded' : ''}" style="border: 1px solid #bae6fd; margin-top: 16px;">
                 <div class="collapsible-header" style="background-color: #f0f9ff;" onclick="this.parentElement.classList.toggle('expanded')">
                     <h3 style="font-size: 15px; margin: 0; color: #0369a1; font-weight: 600;"><i class="ph ph-drop" style="margin-right: 6px; position: relative; top: 2px;"></i>Water</h3>
                     <i class="ph ph-caret-down" style="color: #0369a1;"></i>
@@ -648,17 +674,23 @@ const app = {
 
     handleSearch: function(term, targetView) {
         if(targetView !== 'countries' && targetView !== 'systems') return;
-        
-        const listId = targetView === 'countries' ? 'country-list' : 'system-list';
-        const items = document.querySelectorAll(`#${listId} .searchable-item`);
-        
+
+        const listId   = targetView === 'countries' ? 'country-list' : 'system-list';
+        const countId  = targetView === 'countries' ? 'country-count' : 'system-count';
+        const items    = document.querySelectorAll(`#${listId} .searchable-item`);
+
+        let visible = 0;
         items.forEach(item => {
-            if(term === '' || item.dataset.name.includes(term)) {
-                item.style.display = 'flex';
-            } else {
-                item.style.display = 'none';
-            }
+            const match = term === '' || item.dataset.name.includes(term);
+            item.style.display = match ? 'flex' : 'none';
+            if (match) visible++;
         });
+
+        const countEl = document.getElementById(countId);
+        if (countEl) {
+            countEl.textContent = term ? `${visible} of ${items.length}` : items.length;
+            countEl.classList.toggle('search-active', term.length > 0);
+        }
     },
 
     // Utility: Animate numbers counting up
