@@ -96,7 +96,10 @@ const app = {
             view.classList.toggle('active', view.id === `view-${viewId}`);
         });
 
-        if (viewId === 'datasets') this.renderDatasetsView();
+        if (viewId === 'datasets') {
+            this._dsData = null; // always reload fresh when switching to datasets tab
+            this.renderDatasetsView();
+        }
 
         // Update titles
         const titles = {
@@ -900,6 +903,9 @@ const app = {
         topicFilter = topicFilter || panelEl.dataset.topicFilter || 'all';
         panelEl.dataset.typeFilter  = typeFilter;
         panelEl.dataset.topicFilter = topicFilter;
+
+        // Detect stale _dsData that lacks country resolution (old format)
+        if (this._dsData && !this._dsData.some(d => d.country)) this._dsData = null;
 
         if (!this._dsData) {
             panelEl.innerHTML = `<div style="padding:40px;text-align:center;color:var(--text-muted)">
