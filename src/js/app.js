@@ -2,6 +2,7 @@ const app = {
     data: null,
     currentView: 'dashboard',
     activeTopic: null,
+    _sortMode: { countries: 'count', systems: 'count' },
 
     init: async function() {
         this.bindEvents();
@@ -257,6 +258,30 @@ const app = {
         document.querySelectorAll(`#${listId} .list-item-row`).forEach(r => r.classList.remove('active-item'));
     },
 
+    setSortMode: function(type, mode) {
+        this._sortMode[type] = mode;
+        if (type === 'countries') this.renderCountriesList();
+        else this.renderSystemsList();
+    },
+
+    copyDoi: function(doi) {
+        const text = doi.startsWith('http') ? doi : `https://doi.org/${doi}`;
+        navigator.clipboard.writeText(text).then(() => {
+            this.showToast('DOI copied to clipboard');
+        }).catch(() => {
+            this.showToast('Could not copy — try manually');
+        });
+    },
+
+    showToast: function(msg) {
+        const toast = document.getElementById('app-toast');
+        if (!toast) return;
+        toast.textContent = msg;
+        toast.classList.add('visible');
+        clearTimeout(this._toastTimer);
+        this._toastTimer = setTimeout(() => toast.classList.remove('visible'), 2200);
+    },
+
     renderMap: function() {
         const mapDiv = document.getElementById('regions_div');
         if (!mapDiv) return;
@@ -319,21 +344,35 @@ const app = {
             return (profile.ontology_breakdown && profile.ontology_breakdown[this.activeTopic]) || 0;
         };
 
+        const mode = this._sortMode.countries;
         const countries = Object.entries(this.data.country_profiles)
             .filter(([name]) => name !== 'Unknown' && name !== 'N/A' && name !== '')
             .map(([name, profile]) => ({ name, profile, displayCount: getDisplayCount(profile) }))
             .filter(item => item.displayCount > 0)
-            .sort((a,b) => b.displayCount - a.displayCount);
+            .sort((a, b) => mode === 'az' ? a.name.localeCompare(b.name) : b.displayCount - a.displayCount);
 
         const total = countries.length;
         document.getElementById('country-count').textContent = total;
 
+        // Sync sort bar active state
+        document.querySelectorAll('#country-sort-bar .sort-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.mode === mode);
+        });
+
         const container = document.getElementById('country-list');
-        container.innerHTML = countries.map(({name, displayCount}) => `
+        container.innerHTML = countries.map(({name, profile, displayCount}) => {
+            const ob = profile.ontology_breakdown || {};
+            const dots = [
+                ob.Adaptation > 0 ? '<span class="topic-dot-sm adapt" title="Adaptation"></span>' : '',
+                ob.Mitigation > 0 ? '<span class="topic-dot-sm mitig" title="Mitigation"></span>' : '',
+                ob.Water      > 0 ? '<span class="topic-dot-sm water" title="Water"></span>'      : '',
+            ].join('');
+            return `
             <div class="list-item-row searchable-item" data-name="${name.toLowerCase()}" onclick="app.showProfileDetail('countries', '${name.replace(/'/g, "\\'")}')">
                 <span class="list-item-name">${name}</span>
-                <span class="list-item-count">${displayCount}</span>
-            </div>`).join('');
+                <span class="list-item-right"><span class="list-topic-dots">${dots}</span><span class="list-item-count">${displayCount}</span></span>
+            </div>`;
+        }).join('');
 
         // Populate empty state with top suggestions
         const top5 = countries.slice(0, 5);
@@ -359,20 +398,34 @@ const app = {
             return (profile.ontology_breakdown && profile.ontology_breakdown[this.activeTopic]) || 0;
         };
 
+        const mode = this._sortMode.systems;
         const systems = Object.entries(this.data.system_profiles)
             .map(([name, profile]) => ({ name, profile, displayCount: getDisplayCount(profile) }))
             .filter(item => item.displayCount > 0)
-            .sort((a,b) => b.displayCount - a.displayCount);
+            .sort((a, b) => mode === 'az' ? a.name.localeCompare(b.name) : b.displayCount - a.displayCount);
 
         const total = systems.length;
         document.getElementById('system-count').textContent = total;
 
+        // Sync sort bar active state
+        document.querySelectorAll('#system-sort-bar .sort-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.mode === mode);
+        });
+
         const container = document.getElementById('system-list');
-        container.innerHTML = systems.map(({name, displayCount}) => `
+        container.innerHTML = systems.map(({name, profile, displayCount}) => {
+            const ob = profile.ontology_breakdown || {};
+            const dots = [
+                ob.Adaptation > 0 ? '<span class="topic-dot-sm adapt" title="Adaptation"></span>' : '',
+                ob.Mitigation > 0 ? '<span class="topic-dot-sm mitig" title="Mitigation"></span>' : '',
+                ob.Water      > 0 ? '<span class="topic-dot-sm water" title="Water"></span>'      : '',
+            ].join('');
+            return `
             <div class="list-item-row searchable-item" data-name="${name.toLowerCase()}" onclick="app.showProfileDetail('systems', '${name.replace(/'/g, "\\'")}')">
                 <span class="list-item-name" style="text-transform:capitalize">${name}</span>
-                <span class="list-item-count">${displayCount}</span>
-            </div>`).join('');
+                <span class="list-item-right"><span class="list-topic-dots">${dots}</span><span class="list-item-count">${displayCount}</span></span>
+            </div>`;
+        }).join('');
 
         // Populate empty state with top suggestions
         const top5 = systems.slice(0, 5);
@@ -567,6 +620,7 @@ const app = {
                             <span class="dataset-type-badge ${dtMeta.cls}" title="Dataset type">
                                 <i class="ph ${dtMeta.icon}"></i>${dtMeta.label}
                             </span>
+                            <button class="copy-doi-btn" onclick="event.preventDefault();app.copyDoi('${cleanDoi.replace(/'/g,"\\'")}');" title="Copy DOI link"><i class="ph ph-copy"></i></button>
                         </div>
                         <div class="source-metrics">
                             <div class="metric citations" title="Citations">
@@ -625,6 +679,7 @@ const app = {
                         <div class="source-header">
                             ${i < 3 ? `<span class="rank-badge rank-${i+1}">#${i+1}</span>` : '<i class="ph ph-article"></i>'}
                             <span class="source-title" title="${title}">${title || cleanDoi}</span>
+                            <button class="copy-doi-btn" onclick="event.preventDefault();app.copyDoi('${cleanDoi.replace(/'/g,"\\'")}');" title="Copy DOI link"><i class="ph ph-copy"></i></button>
                         </div>
                         <div class="source-metrics">
                             <div class="metric citations" title="Citations">
@@ -981,6 +1036,7 @@ const app = {
                     <i class="ph ph-database"></i>
                     <span class="source-title" title="${d.title}">${d.title||cleanDoi}</span>
                     <span class="dataset-type-badge ${dm.cls}"><i class="ph ${dm.icon}"></i>${dm.label}</span>
+                    <button class="copy-doi-btn" onclick="event.preventDefault();app.copyDoi('${cleanDoi.replace(/'/g,"\\'")}');" title="Copy DOI link"><i class="ph ph-copy"></i></button>
                 </div>
                 ${ontoBadges?`<div class="ds-onto-row">${ontoBadges}</div>`:''}
                 <div class="source-metrics">
@@ -1127,6 +1183,7 @@ const app = {
                         <i class="ph ph-database"></i>
                         <span class="source-title" title="${d.title}">${d.title||cleanDoi}</span>
                         <span class="dataset-type-badge ${dm.cls}"><i class="ph ${dm.icon}"></i>${dm.label}</span>
+                        <button class="copy-doi-btn" onclick="event.preventDefault();app.copyDoi('${cleanDoi.replace(/'/g,"\\'")}');" title="Copy DOI link"><i class="ph ph-copy"></i></button>
                     </div>
                     ${ontoBadges?`<div class="ds-onto-row">${ontoBadges}</div>`:''}
                     <div class="source-metrics">

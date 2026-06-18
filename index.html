@@ -166,6 +166,10 @@
                                 <i class="ph ph-magnifying-glass"></i>
                                 <input type="text" id="country-search" placeholder="Filter countries...">
                             </div>
+                            <div class="list-sort-bar" id="country-sort-bar">
+                                <button class="sort-btn active" data-mode="count" onclick="app.setSortMode('countries','count')"><i class="ph ph-sort-descending"></i> Studies</button>
+                                <button class="sort-btn" data-mode="az" onclick="app.setSortMode('countries','az')">A–Z</button>
+                            </div>
                             <div class="list-body scrollable" id="country-list">
                                 <!-- Populated by JS -->
                             </div>
@@ -193,6 +197,10 @@
                             <div class="panel-search">
                                 <i class="ph ph-magnifying-glass"></i>
                                 <input type="text" id="system-search" placeholder="Filter systems...">
+                            </div>
+                            <div class="list-sort-bar" id="system-sort-bar">
+                                <button class="sort-btn active" data-mode="count" onclick="app.setSortMode('systems','count')"><i class="ph ph-sort-descending"></i> Studies</button>
+                                <button class="sort-btn" data-mode="az" onclick="app.setSortMode('systems','az')">A–Z</button>
                             </div>
                             <div class="list-body scrollable" id="system-list">
                                 <!-- Populated by JS -->
@@ -232,6 +240,9 @@
             </div>
         </main>
     </div>
+
+    <!-- Toast notification -->
+    <div id="app-toast" aria-live="polite"></div>
 
     <!-- Application Logic -->
     <script src="src/js/app.js"></script>

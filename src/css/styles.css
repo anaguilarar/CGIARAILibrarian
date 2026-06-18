@@ -1616,6 +1616,118 @@ h1, h2, h3, h4, h5, h6 {
 }
 .back-breadcrumb i { font-size: 14px; }
 
+/* ─── Phase 5: Sort bar ─────────────────────────────────────────────────────── */
+.list-sort-bar {
+    display: flex;
+    gap: 4px;
+    padding: 6px 16px 8px;
+    border-bottom: 1px solid var(--border);
+}
+.sort-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 100px;
+    border: 1px solid var(--border);
+    background: transparent;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: var(--transition);
+}
+.sort-btn:hover { border-color: var(--secondary); color: var(--primary); }
+.sort-btn.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+}
+.sort-btn i { font-size: 13px; }
+
+/* ─── Phase 5: List item right-side layout ──────────────────────────────────── */
+.list-item-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+.list-topic-dots {
+    display: flex;
+    gap: 3px;
+    align-items: center;
+}
+.topic-dot-sm {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.topic-dot-sm.adapt { background: #4ade80; }
+.topic-dot-sm.mitig { background: #60a5fa; }
+.topic-dot-sm.water { background: #38bdf8; }
+
+/* ─── Phase 5: Copy DOI button ──────────────────────────────────────────────── */
+.copy-doi-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s, background 0.15s, border-color 0.15s;
+    font-size: 13px;
+    margin-left: auto;
+}
+.source-card:hover .copy-doi-btn { opacity: 1; }
+.copy-doi-btn:hover {
+    background: var(--background);
+    border-color: var(--border);
+    color: var(--primary);
+}
+
+/* ─── Phase 5: Toast notification ───────────────────────────────────────────── */
+#app-toast {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%) translateY(12px);
+    background: var(--primary);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 10px 20px;
+    border-radius: 100px;
+    box-shadow: var(--shadow-md);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    z-index: 9999;
+    white-space: nowrap;
+}
+#app-toast.visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* ─── Phase 5: Sticky detail tabs ───────────────────────────────────────────── */
+.detail-tabs {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--surface);
+    margin: -4px -24px 16px;
+    padding: 0 24px;
+    border-bottom: 1px solid var(--border);
+}
+
 .nav-item:focus-visible,
 .btn-ghost:focus-visible,
 .source-card:focus-visible,
