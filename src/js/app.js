@@ -147,15 +147,39 @@ const app = {
     },
 
     renderDashboard: function() {
-        // We only modify the top lists dynamically. The top header global stats stay constant,
-        // EXCEPT we could modify them, but usually they represent total overall stats. 
-        // We'll leave the 4 global metric cards untouched here because they act as toggles themselves.
         if (this.data && !this.activeTopic && document.getElementById('stat-total').innerHTML === '0') {
             const stats = this.data.global_stats;
             this.animateValue('stat-total', stats.total_count);
             this.animateValue('stat-adaptation', stats.ontology_breakdown.Adaptation || 0);
             this.animateValue('stat-mitigation', stats.ontology_breakdown.Mitigation || 0);
             this.animateValue('stat-water', stats.ontology_breakdown.Water || 0);
+        }
+
+        // Topic filter feedback banner
+        const banner = document.getElementById('topic-filter-banner');
+        if (banner) {
+            if (this.activeTopic) {
+                const topicCount = this.data.global_stats.ontology_breakdown[this.activeTopic] || 0;
+                const topicIcons = { Adaptation: 'ph-leaf', Mitigation: 'ph-wind', Water: 'ph-drop' };
+                const topicColors = { Adaptation: '#166534', Mitigation: '#1e40af', Water: '#0369a1' };
+                const topicBg    = { Adaptation: '#f0fdf4', Mitigation: '#eff6ff', Water: '#f0f9ff' };
+                const topicBorder = { Adaptation: '#bbf7d0', Mitigation: '#bfdbfe', Water: '#bae6fd' };
+                banner.innerHTML = `
+                    <div class="topic-filter-banner" style="border-color:${topicBorder[this.activeTopic]};background:${topicBg[this.activeTopic]}">
+                        <i class="ph ${topicIcons[this.activeTopic]}" style="color:${topicColors[this.activeTopic]}"></i>
+                        <span style="color:${topicColors[this.activeTopic]}">
+                            Filtering by <strong>${this.activeTopic}</strong> — showing
+                            <strong>${topicCount.toLocaleString()}</strong> records
+                        </span>
+                        <button class="banner-clear-btn" onclick="app.clearTopicFilter()" title="Clear filter">
+                            <i class="ph ph-x"></i> Clear filter
+                        </button>
+                    </div>`;
+                banner.style.display = 'block';
+            } else {
+                banner.innerHTML = '';
+                banner.style.display = 'none';
+            }
         }
 
         const getDisplayCount = (profile) => {
@@ -194,6 +218,17 @@ const app = {
                 <span class="list-item-count">${displayCount} Records</span>
             </div>
         `).join('');
+    },
+
+    clearTopicFilter: function() {
+        this.activeTopic = null;
+        document.querySelectorAll('.metric-card.clickable-card').forEach(c => c.classList.remove('active-card'));
+        const totalCard = document.getElementById('total-records-card');
+        if (totalCard) totalCard.classList.add('active-card');
+        this.renderDashboard();
+        this.renderMap();
+        this.renderCountriesList();
+        this.renderSystemsList();
     },
 
     renderMap: function() {
@@ -730,9 +765,22 @@ const app = {
         if (!root) return;
 
         if (!this._dsData) {
-            root.innerHTML = `<div style="padding:60px;text-align:center;color:var(--text-muted)">
-                <i class="ph ph-spinner ph-spin" style="font-size:28px"></i>
-                <p style="margin-top:14px;font-size:14px">Loading datasets...</p></div>`;
+            root.innerHTML = `
+                <div class="ds-stat-grid">
+                    ${[0,1,2,3].map(() => `<div class="ds-stat-card skeleton-card"><div class="skel skel-icon"></div><div><div class="skel skel-val"></div><div class="skel skel-lbl"></div></div></div>`).join('')}
+                </div>
+                <div class="glass-panel ds-filters-panel" style="min-height:80px">
+                    <div class="skel-filter-row">${[0,1,2,3,4].map(() => `<div class="skel skel-btn"></div>`).join('')}</div>
+                </div>
+                <div class="glass-panel" style="padding:20px">
+                    <div class="doi-list">${[0,1,2,3,4,5].map(() => `
+                        <div class="skeleton-card" style="padding:18px;border-radius:var(--radius-md);border:1px solid var(--border)">
+                            <div class="skel skel-title" style="margin-bottom:12px"></div>
+                            <div class="skel skel-line"></div>
+                            <div class="skel-metrics">${[0,1,2].map(() => `<div class="skel skel-metric"></div>`).join('')}</div>
+                        </div>`).join('')}
+                    </div>
+                </div>`;
             fetch('cgiar_mas_agent2/output/datasets.json')
                 .then(r => { if (!r.ok) throw new Error('datasets.json not found'); return r.json(); })
                 .then(data => {
@@ -817,6 +865,16 @@ const app = {
                         }).join('')}
                     </div>
                 </div>
+                ${(this._dsState.typeFilter !== 'all' || this._dsState.topicFilter !== 'all') ? `
+                <div class="ds-clear-row">
+                    <span class="ds-active-filters">
+                        ${this._dsState.typeFilter !== 'all' ? `<span class="ds-active-chip dtype-btn-${this._dsState.typeFilter}">${this.capitalize(this._dsState.typeFilter)} <button onclick="app.setDsFilter('type','all')" title="Remove"><i class="ph ph-x"></i></button></span>` : ''}
+                        ${this._dsState.topicFilter !== 'all' ? `<span class="ds-active-chip topic-btn-${this._dsState.topicFilter.toLowerCase()}">${this._dsState.topicFilter === 'multi' ? 'Multi-topic' : this._dsState.topicFilter} <button onclick="app.setDsFilter('topic','all')" title="Remove"><i class="ph ph-x"></i></button></span>` : ''}
+                    </span>
+                    <button class="ds-clear-all-btn" onclick="app.clearDsFilters()">
+                        <i class="ph ph-funnel-x"></i> Clear all filters
+                    </button>
+                </div>` : ''}
                 <div class="ds-intersections">
                     <span class="ds-inter-label">Cross-cutting:</span>
                     ${[['Adaptation','Water','adapt-water'],['Adaptation','Mitigation','adapt-mitig'],['Mitigation','Water','mitig-water']]
@@ -926,6 +984,12 @@ const app = {
         if (kind === 'ranking') this._dsState.ranking     = value;
         if (kind === 'type')    this._dsState.typeFilter   = value;
         if (kind === 'topic')   this._dsState.topicFilter  = value;
+        this.renderDatasetsView();
+    },
+
+    clearDsFilters: function() {
+        this._dsState.typeFilter  = 'all';
+        this._dsState.topicFilter = 'all';
         this.renderDatasetsView();
     },
 
