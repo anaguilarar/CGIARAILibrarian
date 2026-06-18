@@ -248,20 +248,18 @@ class Agent2Pipeline:
         system_ontology_breakdown = get_ontology_breakdown_by_group(df, "production_system")
 
         # Dataset-specific top papers and counts
-        # Prefer explicit is_dataset flag; fall back to Dataverse (which is type=dataset by API contract)
-        if "is_dataset" in df.columns:
-            df_datasets = df[df["is_dataset"].astype(str).str.lower().isin(["true", "1"])]
-        elif "repository_source" in df.columns:
-            df_datasets = df[df["repository_source"].str.strip().str.lower() == "dataverse"]
-            logger.info("  is_dataset column absent — using Dataverse records (%d) as dataset proxy.", len(df_datasets))
-        else:
-            df_datasets = df.iloc[0:0]
+        # Union of: explicit is_dataset flag + all Dataverse records (always datasets by API contract)
+        import numpy as np
+        flag_mask = df["is_dataset"].astype(str).str.lower().isin(["true", "1"]) if "is_dataset" in df.columns else pd.Series(False, index=df.index)
+        dv_mask   = df["repository_source"].str.strip().str.lower().str.contains("dataverse", na=False) if "repository_source" in df.columns else pd.Series(False, index=df.index)
+        df_datasets = df[flag_mask | dv_mask]
+        logger.info("  Dataset records: %d (is_dataset=%d, dataverse=%d).", len(df_datasets), flag_mask.sum(), dv_mask.sum())
 
         country_top_datasets = get_top_papers(df_datasets, "country", n=settings.TOP_N_PAPERS) if len(df_datasets) else {}
         system_top_datasets = get_top_papers(df_datasets, "production_system", n=settings.TOP_N_PAPERS) if len(df_datasets) else {}
         country_dataset_counts = count_by_column(df_datasets, "country") if len(df_datasets) else {}
         system_dataset_counts = count_by_column(df_datasets, "production_system") if len(df_datasets) else {}
-        global_top_datasets = get_global_top_datasets(df_datasets, n=100) if len(df_datasets) else {}
+        global_top_datasets = get_global_top_datasets(df_datasets, n=200) if len(df_datasets) else {}
         logger.info("  Top papers extracted. %d dataset records found.", len(df_datasets))
 
         # ── 3. Curator layer ─────────────────────────────────────────────────────
