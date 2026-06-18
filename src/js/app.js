@@ -153,6 +153,18 @@ const app = {
             this.animateValue('stat-adaptation', stats.ontology_breakdown.Adaptation || 0);
             this.animateValue('stat-mitigation', stats.ontology_breakdown.Mitigation || 0);
             this.animateValue('stat-water', stats.ontology_breakdown.Water || 0);
+
+            // Animate share bars after counter finishes
+            const total = stats.total_count || 1;
+            setTimeout(() => {
+                [['Adaptation','adaptation'], ['Mitigation','mitigation'], ['Water','water']].forEach(([key, id]) => {
+                    const pct = Math.round(((stats.ontology_breakdown[key] || 0) / total) * 100);
+                    const fill = document.getElementById('fill-' + id);
+                    const label = document.getElementById('share-' + id);
+                    if (fill)  fill.style.width  = pct + '%';
+                    if (label) label.textContent  = pct + '%';
+                });
+            }, 650);
         }
 
         // Topic filter feedback banner
@@ -835,7 +847,7 @@ const app = {
                 </div>`).join('')}
             </div>
 
-            <div class="glass-panel ds-filters-panel">
+            <div class="glass-panel ds-filters-panel" style="background:var(--background)">
                 <div class="ds-filter-row">
                     <span class="ds-filter-label">Type</span>
                     <div class="ds-filter-group">
@@ -890,7 +902,7 @@ const app = {
                 </div>
             </div>
 
-            <div class="glass-panel" style="padding:0;overflow:hidden">
+            <div class="glass-panel" style="padding:0;overflow:hidden;margin-top:16px">
                 <div class="ds-ranking-tabs">
                     ${[['most_downloaded','ph-download-simple','Most Downloaded'],['most_cited','ph-quotes','Most Cited'],['most_viewed','ph-eye','Most Viewed']].map(([key,icon,label]) => `
                     <button class="ds-rank-tab ${this._dsState.ranking===key?'active':''}" onclick="app.setDsFilter('ranking','${key}')">

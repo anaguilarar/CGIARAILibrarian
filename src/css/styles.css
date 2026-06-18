@@ -147,13 +147,17 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .nav-item.active {
-    background: rgba(194, 223, 134, 0.13);
+    background: rgba(255, 255, 255, 0.09);
     color: #C2DF86;
-    box-shadow: inset 3px 0 0 #C2DF86;
+    box-shadow: inset 4px 0 0 #C2DF86;
+    font-weight: 600;
 }
 
 .nav-item.active i {
     color: #C2DF86;
+    background: rgba(194, 223, 134, 0.15);
+    border-radius: 6px;
+    padding: 4px;
 }
 
 .sidebar-footer {
@@ -319,24 +323,6 @@ h1, h2, h3, h4, h5, h6 {
     color: white;
 }
 
-.metric-card.gradient-card.active-card {
-    background: rgba(122, 171, 58, 0.06);
-    border-color: var(--secondary);
-    box-shadow: var(--shadow-sm), 0 0 0 1px var(--secondary);
-}
-
-.metric-card.gradient-card.active-card h3 {
-    color: var(--text-muted);
-}
-
-.metric-card.gradient-card.active-card .metric-icon {
-    background: rgba(122, 171, 58, 0.1);
-    color: var(--secondary);
-}
-
-.metric-card.gradient-card.active-card .value {
-    color: var(--text-main);
-}
 
 .metric-icon {
     width: 46px;
@@ -349,6 +335,13 @@ h1, h2, h3, h4, h5, h6 {
     justify-content: center;
     font-size: 22px;
     flex-shrink: 0;
+}
+
+.metric-data {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
 }
 
 .metric-data h3 {
@@ -367,6 +360,50 @@ h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-mono);
     line-height: 1;
     color: var(--primary);
+}
+
+/* ─── Metric Share Bar ──────────────────────────────────────────────────────── */
+.metric-share {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.share-track {
+    flex: 1;
+    height: 4px;
+    background: rgba(0, 0, 0, 0.08);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.gradient-card .share-track {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.share-fill {
+    height: 100%;
+    background: var(--secondary);
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.8s ease;
+}
+
+.gradient-card .share-fill {
+    background: #C2DF86;
+}
+
+.share-pct {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    white-space: nowrap;
+    font-family: var(--font-mono);
+}
+
+.gradient-card .share-pct {
+    color: rgba(255, 255, 255, 0.6);
 }
 
 /* ─── Glass Panels ─────────────────────────────────────────────────────────── */
@@ -1305,6 +1342,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .ds-ranking-tabs {
     display: flex;
+    background: var(--background);
     border-bottom: 1px solid var(--border);
 }
 .ds-rank-tab {
