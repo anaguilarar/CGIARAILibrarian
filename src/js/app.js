@@ -243,6 +243,20 @@ const app = {
         this.renderSystemsList();
     },
 
+    clearProfileDetail: function(type) {
+        const containerId = type === 'countries' ? 'country-detail' : 'system-detail';
+        const listId = type === 'countries' ? 'country-list' : 'system-list';
+        const container = document.getElementById(containerId);
+        if (container) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="ph ph-cursor-click"></i>
+                    <p>Select a ${type === 'countries' ? 'country' : 'production system'} to view synthesized findings.</p>
+                </div>`;
+        }
+        document.querySelectorAll(`#${listId} .list-item-row`).forEach(r => r.classList.remove('active-item'));
+    },
+
     renderMap: function() {
         const mapDiv = document.getElementById('regions_div');
         if (!mapDiv) return;
@@ -527,7 +541,7 @@ const app = {
             unstructured:  { icon: 'ph-file-text',      label: 'Unstructured',  cls: 'dtype-unstructured' },
             unknown:       { icon: 'ph-question',       label: 'Unknown',       cls: 'dtype-unknown' },
         };
-        const datasetsHtml = (profile.top_datasets || []).slice(0, 10).map(doiObj => {
+        const datasetsHtml = (profile.top_datasets || []).slice(0, 10).map((doiObj, i) => {
             const isDict = typeof doiObj === 'object' && doiObj !== null;
             const doiString = isDict ? (doiObj.doi || '') : (doiObj || '');
             const cleanDoi = doiString.replace('doi:', '');
@@ -548,7 +562,7 @@ const app = {
                 return `
                     <a href="https://doi.org/${cleanDoi}" target="_blank" class="source-card ${sourceClass}">
                         <div class="source-header">
-                            <i class="ph ph-database"></i>
+                            ${i < 3 ? `<span class="rank-badge rank-${i+1}">#${i+1}</span>` : '<i class="ph ph-database"></i>'}
                             <span class="source-title" title="${title}">${title || cleanDoi}</span>
                             <span class="dataset-type-badge ${dtMeta.cls}" title="Dataset type">
                                 <i class="ph ${dtMeta.icon}"></i>${dtMeta.label}
@@ -590,7 +604,7 @@ const app = {
         }).join('');
 
         // Build DOIs
-        const doisHtml = (profile.top_dois || []).slice(0, 10).map(doiObj => {
+        const doisHtml = (profile.top_dois || []).slice(0, 10).map((doiObj, i) => {
             const isDict = typeof doiObj === 'object' && doiObj !== null;
             const doiString = isDict ? (doiObj.doi || '') : (doiObj || '');
             const cleanDoi = doiString.replace('doi:', '');
@@ -609,7 +623,7 @@ const app = {
                 return `
                     <a href="https://doi.org/${cleanDoi}" target="_blank" class="source-card ${sourceClass}">
                         <div class="source-header">
-                            <i class="ph ph-article"></i>
+                            ${i < 3 ? `<span class="rank-badge rank-${i+1}">#${i+1}</span>` : '<i class="ph ph-article"></i>'}
                             <span class="source-title" title="${title}">${title || cleanDoi}</span>
                         </div>
                         <div class="source-metrics">
@@ -650,6 +664,10 @@ const app = {
         const datasetCount = profile.dataset_count || 0;
 
         container.innerHTML = `
+            <button class="back-breadcrumb animation-fadeIn" onclick="app.clearProfileDetail('${type}')">
+                <i class="ph ph-arrow-left"></i>
+                <span>All ${type === 'countries' ? 'Countries' : 'Systems'}</span>
+            </button>
             <div class="profile-title-area animation-fadeIn">
                 <h2 style="text-transform: ${type === 'systems' ? 'capitalize' : 'none'};">${id}</h2>
                 <div class="profile-meta" style="gap: 8px; flex-wrap: wrap;">
