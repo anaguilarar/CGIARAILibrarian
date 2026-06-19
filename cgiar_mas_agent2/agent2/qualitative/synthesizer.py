@@ -7,6 +7,36 @@ from ...config.settings import LLM_API_BASE, LLM_MODEL_NAME
 
 logger = logging.getLogger(__name__)
 
+# Ordered so longer/more-specific names are matched before short abbreviations
+_CENTER_PATTERNS = [
+    ("Alliance of Bioversity International and CIAT", ["Alliance of Bioversity", "Alliance Bioversity"]),
+    ("Bioversity International",  ["Bioversity International", "Bioversity"]),
+    ("CIMMYT",  ["CIMMYT", "International Maize and Wheat Improvement Center"]),
+    ("IRRI",    ["IRRI", "International Rice Research Institute"]),
+    ("ILRI",    ["ILRI", "International Livestock Research Institute"]),
+    ("CIAT",    ["CIAT", "International Center for Tropical Agriculture"]),
+    ("CIP",     ["CIP", "International Potato Center"]),
+    ("ICARDA",  ["ICARDA", "International Center for Agricultural Research in the Dry Areas"]),
+    ("ICRAF",   ["ICRAF", "World Agroforestry"]),
+    ("IITA",    ["IITA", "International Institute of Tropical Agriculture"]),
+    ("IFPRI",   ["IFPRI", "International Food Policy Research Institute"]),
+    ("ICRISAT", ["ICRISAT", "International Crops Research Institute for the Semi-Arid Tropics"]),
+    ("WorldFish", ["WorldFish"]),
+    ("CIFOR",   ["CIFOR", "Center for International Forestry Research"]),
+    ("IWMI",    ["IWMI", "International Water Management Institute"]),
+    ("AfricaRice", ["AfricaRice", "Africa Rice"]),
+]
+
+def _extract_center(authors: str, affiliation: str) -> str:
+    """Return the CGIAR center abbreviation found in authors or affiliation, or empty string."""
+    combined = f"{authors or ''} {affiliation or ''}".lower()
+    for abbrev, patterns in _CENTER_PATTERNS:
+        for pat in patterns:
+            if pat.lower() in combined:
+                return abbrev
+    return ""
+
+
 class LLMSynthesizer:
     """Interface for Local LLM (Ollama) to generate analytical narratives for Agent 2."""
 
@@ -60,7 +90,7 @@ class LLMSynthesizer:
             STRICT Rules for Generation:
             1. **Categorization:** Answer "What has CGIAR done in {cluster_name} for [Category]?" for each of the three categories (Water, Adaptation, Mitigation).
             2. **Independence:** Treat each source as a standalone finding. Do NOT infer chronological links unless explicitly stated.
-            3. **Institutional Voice:** **MANDATORY:** First check the AUTHORS field of each source for a specific CGIAR center name (e.g., CIAT, ILRI, CIMMYT, IRRI, CIP, ICARDA, ICRAF, IITA, IFPRI, ICRISAT, WorldFish, Bioversity, CIFOR, IWMI, AfricaRice, Alliance of Bioversity International and CIAT). If a center name is present in the AUTHORS field, YOU MUST use that specific name as the subject (e.g., "ILRI developed...", "CIMMYT assessed..."). ONLY use the generic term "CGIAR" when no specific center name can be identified in the AUTHORS field.
+            3. **Institutional Voice:** **MANDATORY:** Each source has a pre-extracted CENTER field. If CENTER is a specific name (e.g., IRRI, CIMMYT, ILRI, IFPRI, CIAT, ICRAF, IITA, ICARDA, CIP, ICRISAT, WorldFish, Bioversity, CIFOR, IWMI, AfricaRice, Alliance of Bioversity International and CIAT), YOU MUST use that name as the subject for that source (e.g., "IRRI developed...", "CIMMYT assessed..."). ONLY use the generic term "CGIAR" when CENTER is "unknown" or missing. NEVER use "CGIAR" as the subject for a source that has a specific CENTER value.
             4. **No Meta-Commentary:** **EXTREMELY IMPORTANT:** DO NOT start with "Research in this cluster...", "This dataset...", "The papers...", or "This sample...". Start directly with the actor (e.g., "CGIAR implemented...", "Bioversity developed...").
             5. **No False Connections:** Do NOT use phrases like "building on this," "consequently," "this led to," or "subsequently" between different papers.
             6. **Exclusivity:** If the provided text does not contain evidence for a specific category (e.g., no 'Water' papers), explicitly state "No evidence found in this sample." for that category.
@@ -69,9 +99,9 @@ class LLMSynthesizer:
 
             Output Schema (JSON ONLY):
             {{
-                "narrative": "CGIAR [Center Name] prioritized [Theme] in [Location] through [Innovation]. Specifically: \\n- [Center Name] developed [Innovation 1] (Source A). \\n- [Center Name] assessed [Impact 2] (Source B).",
-                "Adaptation": "• CGIAR [Center] developed [Action/Innovation] (Source_1).\\n• [Center] implemented [Policy] (Source_2).",
-                "Mitigation": "• CGIAR researched [Carbon/GHG Topic] (Source_3).",
+                "narrative": "[Center from CENTER field] prioritized [Theme] in [Location] through [Innovation]. Specifically: \\n- [Center] developed [Innovation 1] (Source A). \\n- [Center] assessed [Impact 2] (Source B).",
+                "Adaptation": "• [Center] developed [Action/Innovation] (Source_1).\\n• [Center] implemented [Policy] (Source_2).",
+                "Mitigation": "• [Center] researched [Carbon/GHG Topic] (Source_3).",
                 "Water": "No evidence found in this sample.",
                 "synthesis_confidence": 0.95,
                 "explanation": "Summarized distinct outputs without inferring causality."
@@ -104,8 +134,11 @@ class LLMSynthesizer:
             clean_abs = self._optimize_text(a.get('abstract', ''), max_chars=1900)
             clean_agent1_explanation = self._optimize_text(a.get('classification_explanation', ''),max_chars = 500)
             authors_raw = a.get('authors', '')
+            affiliation_raw = a.get('affiliation', '')
+            center = _extract_center(authors_raw, affiliation_raw)
+            center_line = f"CENTER: {center}" if center else "CENTER: unknown (use CGIAR)"
             entry = f"""SOURCE_ID: {doi}\n
-                        AUTHORS: {authors_raw}\n
+                        {center_line}\n
                         ONTOLOGY: [{tags_clean}], {clean_agent1_explanation}\n
                         TEXT: {a.get('title', '')}. {clean_abs}\n"""
 

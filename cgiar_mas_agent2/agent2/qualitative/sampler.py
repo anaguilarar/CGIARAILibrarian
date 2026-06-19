@@ -30,7 +30,10 @@ def sample_top_abstracts(
             ...
         }
     """
-    cols = ["title", "abstract", "authors", "doi_pid", "ranking_score", "ontology_tags", "classification_explanation", group_col]
+    # Include affiliation so synthesizer can extract the specific CGIAR center name
+    base_cols = ["title", "abstract", "authors", "affiliation", "doi_pid", "ranking_score", "ontology_tags", "classification_explanation"]
+    available = [c for c in base_cols if c in df.columns]
+    cols = list(dict.fromkeys(available + [group_col]))  # deduplicate in case group_col overlaps
     working = df[cols].copy()
     working["ranking_score"] = pd.to_numeric(
         working["ranking_score"], errors="coerce"
@@ -57,6 +60,7 @@ def sample_top_abstracts(
                 "doi": str(row["doi_pid"]),
                 "title": str(row["title"]),
                 "authors": str(row.get("authors", "")),
+                "affiliation": str(row.get("affiliation", "")),
                 "abstract": str(row["abstract"]),
                 "ontology_tags": str(row["ontology_tags"]),
                 "classification_explanation": str(row["classification_explanation"]),
